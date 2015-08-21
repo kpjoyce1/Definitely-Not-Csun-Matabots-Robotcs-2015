@@ -95,6 +95,7 @@ task updatePosition();
 void zeroOutSensors();
 int average(float value1, float value2);
 int getTicks();
+int turnMapping(float PDOutput);
 void initializeSturctures(robot *pos, encoder *left, encoder *right, Gyroscope *scope);
 float ticksToCm(int ticks);
 
@@ -118,8 +119,12 @@ void pre_auton(){
 /*________________________________________________________________*/
 
 task autonomous(){
-
+	bLCDBacklight = true;
 	startTask(updatePosition);
+
+	clearLCDLine(0);
+  clearLCDLine(1);
+
 
 	turn(PI/2.);
 
@@ -144,19 +149,19 @@ task usercontrol()
 
   while(true)
     {
-    	clearLCDLine(0);
-  		clearLCDLine(1);
+    //	clearLCDLine(0);
+  		//clearLCDLine(1);
 
     	drive();
 
-    	char angle[20];
-    	sprintf(angle, "Angle: %.5f", robotBase.currTheta);
-  		displayLCDCenteredString(1, angle);
+   // 	char angle[20];
+   // 	sprintf(angle, "Angle: %.5f", robotBase.currTheta);
+  	//	displayLCDCenteredString(1, angle);
 
-			char position[20];
-      sprintf(position, "%.2f,%.2f",robotBase.currX, robotBase.currY);
-      displayLCDCenteredString(0, position);
-      wait1Msec(30);
+			//char position[20];
+   //   sprintf(position, "%.2f,%.2f",robotBase.currX, robotBase.currY);
+   //   displayLCDCenteredString(0, position);
+   //   wait1Msec(30);
     }
 }
 
@@ -164,6 +169,19 @@ task usercontrol()
 
 /*                             Funtions                           */
 /*________________________________________________________________*/
+
+int turnMapping(float PDOutput)
+{
+	//motor max : 127
+	//motor min : 0
+
+	//PDOutput max : PI / 2
+	//PDOutput min : 0
+	int power = (PDOutput / ( PI) * 127.) > 25. ? PDOutput / (PI) * 127. : abs(PDOutput) < 0.5 ? 0 : sgn(PDOutput) * 25.;
+
+	return power;
+}
+
 
 void zeroOutSensors()
 {
@@ -205,6 +223,8 @@ void drive()
   motor[rightDrive] = - Y1 + X2;   /*   rightPower */
 }
 
+int motorPower;
+
 void turn(float targetRadians)
 {
 	/*
@@ -215,8 +235,8 @@ void turn(float targetRadians)
 		D- Derivative will be change in angle since last update
 	*/
 
-	float Kp = 80.;
-	float Kd = 80.;
+	float Kp = 1;
+	float Kd = 2;
 
 	while(!(robotBase.currTheta < targetRadians + 0.004 && robotBase.currTheta > targetRadians - 0.004))
 	{
@@ -226,14 +246,17 @@ void turn(float targetRadians)
 
 			float output = Kp * proportion + Kd * derivative;
 
-			motor[leftDrive] = output;
+			motorPower = turnMapping(output);
 
-			motor[rightDrive] = output;
+			motor[leftDrive] = motorPower;
+
+			motor[rightDrive] = motorPower;
 
 			time1[T4] = 0;
 
 			while(time1[T4] < 50){}
-
+			if(motorPower == 0)
+					break;
 	}
 
 
@@ -256,12 +279,22 @@ task updatePosition()
 
     int distance = ticksToCm(getTicks());//Get distance
 
-    robotBase.currTheta = SensorValue[gyro] / 10. * PI / 180.;//Get angle
+		robotBase.currTheta = SensorValue[gyro] / 10. * PI / 180.;//Get angle
 
-    robotBase.currX +=  cos(robotBase.currTheta) * distance;
-    robotBase.currY +=  sin(robotBase.currTheta) * distance;
+		robotBase.currX +=  cos(robotBase.currTheta) * distance;
+		robotBase.currY +=  sin(robotBase.currTheta) * distance;
 
-    time1[T3] = 0;
+		clearLCDLine(0);
+		clearLCDLine(1);
+		char angle[20];
+		sprintf(angle, "Angle: %.5f", robotBase.currTheta);
+		displayLCDCenteredString(1, angle);
+
+		char position[20];
+		sprintf(position, "%.2f,%.2f",robotBase.currX, robotBase.currY);
+		displayLCDCenteredString(0, position);
+
+		time1[T3] = 0;
 
     while(time1[T3] < 80){} /*  Wait for 80 miliseconds to update */
 
