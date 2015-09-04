@@ -16,6 +16,8 @@ Current Issues:
 -Implement the base for an aim funtion which includes a turn funtion and finding the distance between two points,
  the final steps will be completing the kinematics equation.
  
+ For learning puposes
+ 
 Extra
 -----
 In the future we would like to use some vision system to check for objects or obstacles this will be a final phase
