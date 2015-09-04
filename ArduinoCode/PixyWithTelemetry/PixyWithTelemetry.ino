@@ -13,7 +13,6 @@ float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
 Pixy pixy;
 int blockCount;
 
-
 Adafruit_10DOF                dof   = Adafruit_10DOF();
 Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(30301);
 Adafruit_LSM303_Mag_Unified   mag   = Adafruit_LSM303_Mag_Unified(30302);
@@ -21,7 +20,6 @@ Adafruit_BMP085_Unified       bmp   = Adafruit_BMP085_Unified(18001);
 
 void initSensors();
 void PixyDetection();
-
 float currentHeading;
 
 
@@ -53,11 +51,12 @@ void loop() {
   for(int i = 0; i < blockCount; i++)
   {
     //pixy.blocks[i].print(); 
-    
   }
   
-  Serial.print("^x\\y$");
-  Serial.println();
+  
+  Serial.write(1);
+  Serial.print(1);
+  
   
   delay(50);
   

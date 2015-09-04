@@ -2,6 +2,8 @@
 #pragma config(Sensor, in8,    gyro,           sensorGyro)
 #pragma config(Sensor, dgtl1,  rightDriveEnc,  sensorQuadEncoder)
 #pragma config(Sensor, dgtl3,  leftDriveEnc,   sensorQuadEncoder)
+#pragma config(Sensor, dgtl7,  rightDriveEnc2, sensorQuadEncoder)
+#pragma config(Sensor, dgtl10, leftDriveEnc2,  sensorQuadEncoder)
 #pragma config(Motor,  port1,           motorA,        tmotorVex393_HBridge, openLoop)
 #pragma config(Motor,  port2,           rightDrive,    tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port9,           leftDrive,     tmotorVex393_MC29, openLoop)
@@ -151,7 +153,6 @@ task usercontrol()
     {
     //	clearLCDLine(0);
   		//clearLCDLine(1);
-
     	drive();
 
    // 	char angle[20];
@@ -273,8 +274,8 @@ task updatePosition()
    */
 
   while(true){
-    leftEnc.currTick = SensorValue[leftDriveEnc];
-    rightEnc.currTick = SensorValue[rightDriveEnc];
+    leftEnc.currTick = (SensorValue[leftDriveEnc] + SensorValue[leftDriveEnc2]) / 2;
+    rightEnc.currTick = (SensorValue[rightDriveEnc] + SensorValue[rightDriveEnc]) / 2;
 
 
     int distance = ticksToCm(getTicks());//Get distance
