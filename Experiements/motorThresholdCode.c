@@ -15,7 +15,7 @@ task main()
 // The forward motor threshold is to be determined by incrementing the motor power
 // until the encoder registers movement. Then the value will be decremented until no movement is
 // registered, this will be the final threshold value saved. The forwardTime will also be saved
-// which is the time it took the motor to move after +1 to power.
+// which is the time it took the motor to move.
 //
 // The Second section of code:
 // Same as the first section, however we are looking for the reverse threshold rather than the forward.
@@ -41,47 +41,31 @@ clearLCDLine(0);
 clearLCDLine(1);
 displayLCDCenteredString(0, "VEX...");
 displayLCDCenteredString(1, "Fuck Yeah..");
+wait1Msec(2000);
 
-motor[motorPin] = 20;
-wait1Msec(1000);
-motor[motorPin] = 0;
-wait1Msec(1000);
-
-motor[motorPin] = 15;
-wait1Msec(1000);
-
-
-wait1Msec(3000);
-
-// FIRST SECTION OF CODE********** ClearTimer(TIMERNAME); timer1(TIMERNAME);
+// FIRST SECTION OF CODE
 
 SensorValue[encoderPin] = 0;// Reset SensorValue to zero
- 	bLCDBacklight = true;
+ 	bLCDBacklight = true; // LCD light is always on
 
 	for(i=1;i<127;i++)	//This for-loop determines the forward motor threshold
 	{
 		clearTimer(T1);
 		motor[motorPin] = i;
-		if ( abs(SensorValue[encoderPin]) > 0)
-			{
-				forwardTime = time1(T1);
-				motorForwardThreshold = i;
-				break;          // Exit the loop because 128 is beyond the for-loops iteration
-			}
-		while( time1(T1) < 50)		  // Allow 200ms for the motor to move
+		while( time1(T1) < 300)		  // Allow 300ms for the motor to move
 		{
-					if ( abs(SensorValue[encoderPin]) > 0)
+			if ( abs(SensorValue[encoderPin]) > 0)
 			{
 				forwardTime = time1(T1);
 				motorForwardThreshold = i;
-				break;          // Exit the loop because 128 is beyond the for-loops iteration
+				break;          // Exit the loop
 			}
 		}
 
 	}
 	motor[motorPin] = 0;			// Stop the motor
-	wait1Msec(1500);						//Pause 500 milliseconds to let the robot hit equilibrium (at rest)
-	SensorValue[encoderPin] = 0; 	// Reset encoder value
+	wait1Msec(1500);			//Pause 500 milliseconds to let the robot hit equilibrium (at rest)
+	SensorValue[encoderPin] = 0; 		// Reset encoder value
 
 	for ( i = motorForwardThreshold - 1; i>0;i--) // This for-loop is used to find the actual threshold
 												   // where the motor is on the verge of moving
@@ -112,11 +96,11 @@ SensorValue[encoderPin] = 0;// Reset SensorValue to zero
 
 SensorValue[encoderPin] = 0; // Reset SensorValue to zero
 
-	for(i=-1;i>-127;i--)	//This for-loop determines the forward motor threshold
+	for(i=-1;i>-127;i--)	//This for-loop determines the reverse motor threshold
 	{
 		clearTimer(T1);
 		motor[motorPin] = i;
-		while( time1(T1) < 200)		  // Allow 200ms for the motor to move
+		while( time1(T1) < 300)		  // Allow 300ms for the motor to move
 		{
 			if ( SensorValue[encoderPin] != 0)
 			{
@@ -131,7 +115,7 @@ SensorValue[encoderPin] = 0; // Reset SensorValue to zero
 	SensorValue[encoderPin] = 0; 	// Reset encoder value
 
 	for ( i = motorReverseThreshold + 1; i<0 ; i++) // This for-loop is used to find the actual threshold
-												   // where the motor is on the verge of moving
+							// where the motor is on the verge of moving
 	{
 		motor[motorPin] = i;
 		clearTimer(T1);
@@ -158,9 +142,9 @@ SensorValue[encoderPin] = 0; // Reset SensorValue to zero
 
 	while(true)
 	{
-		if ( motorForwardThreshold < 70 && motorReverseThreshold > -70 ) // anything past this boundary
-			{															   // means the motor is faulty
-				// Forward threshold information
+		if ( motorForwardThreshold < 70 && motorReverseThreshold > -70 ) // anything past this boundary (arbitrarily)
+			{							// means the motor is faulty
+										// Forward threshold information
 				char motorThresh[20];
 				sprintf(motorThresh, "ForwardThesh: %d", motorForwardThreshold);
 				displayLCDCenteredString(0, motorThresh);
