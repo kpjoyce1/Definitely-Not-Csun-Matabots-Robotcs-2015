@@ -2,8 +2,8 @@
 #pragma config(Sensor, in8,    gyro,           sensorGyro)
 #pragma config(Sensor, dgtl1,  rightDriveEnc,  sensorQuadEncoder)
 #pragma config(Sensor, dgtl3,  leftDriveEnc,   sensorQuadEncoder)
-#pragma config(Sensor, dgtl7,  rightDriveEnc2, sensorQuadEncoder)
-#pragma config(Sensor, dgtl10, leftDriveEnc2,  sensorQuadEncoder)
+#pragma config(Sensor, dgtl7,  leftDriveEnc2,  sensorQuadEncoder)
+#pragma config(Sensor, dgtl10, rightDriveEnc2, sensorQuadEncoder)
 #pragma config(Motor,  port1,           motorA,        tmotorVex393_HBridge, openLoop)
 #pragma config(Motor,  port2,           rightDrive,    tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port9,           leftDrive,     tmotorVex393_MC29, openLoop)
@@ -122,6 +122,7 @@ void pre_auton(){
 
 task autonomous(){
 	bLCDBacklight = true;
+	stopTask(updatePosition);
 	startTask(updatePosition);
 
 	clearLCDLine(0);
@@ -145,7 +146,7 @@ task usercontrol()
   zeroOutSensors();
 
 	initializeSturctures(robotBase, leftEnc, rightEnc, gyroscope);
-
+	stopTask(updatePosition);
   startTask(updatePosition);
 	bLCDBacklight = true;
 
@@ -236,7 +237,7 @@ void turn(float targetRadians)
 		D- Derivative will be change in angle since last update
 	*/
 
-	float Kp = 1;
+	float Kp = 4;
 	float Kd = 2;
 
 	while(!(robotBase.currTheta < targetRadians + 0.004 && robotBase.currTheta > targetRadians - 0.004))
@@ -297,7 +298,7 @@ task updatePosition()
 
 		time1[T3] = 0;
 
-    while(time1[T3] < 80){} /*  Wait for 80 miliseconds to update */
+    while(time1[T3] < 200){} /*  Wait for 100 miliseconds to update */
 
     robotBase.prevTheta = robotBase.currTheta;
     leftEnc.prevTick = leftEnc.currTick;
@@ -328,5 +329,5 @@ int average(float value1, float value2)
 
 float ticksToCm(int ticks)
 {
-		return 2. * PI * (5.08) * (float)(ticks) / 360.;
+		return 2. * PI * (5.1) * (float)(ticks) / 360.;
 }
