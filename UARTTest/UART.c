@@ -1,4 +1,3 @@
-#pragma config(UART_Usage, UART1, uartVEXLCD, baudRate19200, IOPins, None, None)
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // VEX Cortex UART Test
@@ -25,40 +24,36 @@ int nRcvIndex = 0;
 long nTotalXmitChars = 0;
 long nTotalRcvChars = 0;
 long nTotalRcvOutOfSequence = 0;
-//unsigned char xmitChar;
+unsigned char xmitChar;
 int rcvChar;
 unsigned char rcvChars[23]; // Keep buffer of last 23 characters received.
-char message[23];
-
 task main()
 {
  // Setup the two UART ports
 
  configureSerialPort(uartOne, uartUserControl);
- //configureSerialPort(uartTwo, uartUserControl);
+ configureSerialPort(uartTwo, uartUserControl);
  setBaudRate(uartOne, baudRate115200);
- //setBaudRate(uartTwo, baudRate115200);
+ setBaudRate(uartTwo, baudRate115200);
 
- while (getChar(uartOne) != -1) // Purge existing chars from buffer
+ while (getChar(uartTwo) != -1) // Purge existing chars from buffer
  {}
 
  startTask(UARTReceive);
- while(true){};
-/*
+
  while (true)
  {
  // Loop forever transmitting the characters 0, 1, 2, ..., 255, 0, 1, 2, ....
 
  ++nTotalXmitChars;
  xmitChar = nTotalXmitChars % 256;
- //sendChar(uartOne, xmitChar);
+ sendChar(uartOne, xmitChar);
  while (!bXmitComplete(uartOne))
  {
  wait1Msec(1);
  }
- }*/
+ }
 }
-
 task UARTReceive()
 {
  while (true)
@@ -68,7 +63,7 @@ task UARTReceive()
 
  static int nLastRcvChar = 0;
 
- rcvChar = getChar(uartOne);
+ rcvChar = getChar(uartTwo);
  if (rcvChar == -1)
  {
  // No character available
@@ -87,9 +82,5 @@ task UARTReceive()
  ++nRcvIndex;
  if (nRcvIndex >= sizeof(rcvChars))
  nRcvIndex = 0;
-
-
- message = rcvChars;
- displayLCDCenteredString(0, message);
  }
 }
