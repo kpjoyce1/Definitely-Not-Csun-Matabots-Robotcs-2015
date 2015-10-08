@@ -26,6 +26,9 @@ long nTotalRcvChars = 0;
 long nTotalRcvOutOfSequence = 0;
 unsigned char xmitChar;
 int rcvChar;
+
+char rawr[4];
+
 unsigned char rcvChars[23]; // Keep buffer of last 23 characters received.
 task main()
 {
@@ -54,6 +57,9 @@ task main()
  }
  }
 }
+
+int count = 0;
+
 task UARTReceive()
 {
  while (true)
@@ -71,6 +77,15 @@ task UARTReceive()
  wait1Msec(3); // Don't want to consume too much CPU time. Waiting eliminates CPU consumption for this task.
  continue;
  }
+
+if(count == 4)
+{
+  	count = 0;
+}
+
+rawr[count] = rcvChar;
+count++;
+
  ++nLastRcvChar;
  nLastRcvChar %= 256;
  if (nLastRcvChar != rcvChar)
