@@ -23,4 +23,4 @@ Extra
 In the future we would like to use some vision system to check for objects or obstacles this will be a final phase
 at which our robot's swagger will be so high that it may just leave the team and ride off into the sunset.
 
-If you have any suggestions please email Kevin Joyce at kpjoyce1@gmail.com or call his cell phone (323) 377-6042
+If you have any suggestions please email Kevin Joyce at kpjoyce1@gmail.com 
