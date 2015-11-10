@@ -1,6 +1,7 @@
 #pragma config(Motor,  port1,           leftBack,      tmotorVex393_HBridge, openLoop)
 #pragma config(Motor,  port2,           leftCenter,    tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port3,           leftFront,     tmotorVex393_MC29, openLoop)
+#pragma config(Motor,  port4,           ramp,          tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port5,           leftShooter,   tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port6,           rightShooter,  tmotorVex393_MC29, openLoop)
 #pragma config(Motor,  port7,           intake,        tmotorVex393_MC29, openLoop, reversed)
@@ -79,6 +80,7 @@ void ctrl_intake()
 
 void ctrl_shooter()
 {
+	/*
 	if(vexRT[Btn6D] == 1)
 	{
 		shootMode = 0;
@@ -92,11 +94,45 @@ void ctrl_shooter()
 		shootMode = 2;
 	}
 
-	shootSpeed = shootMode == 0 ? 0 : shootMode == 1 ? 80 : shootMode == 2 ? 50 : 0;
+	shootSpeed = shootMode == 0 ? 0 : shootMode == 1 ? 95 : shootMode == 2 ? 57 : 0;
+	*/
 
+	if(vexRT[Btn6D] && !isSwitchingSpeeds)
+	{
+		shootSpeed += 5;
+		isSwitchingSpeeds = true;
+	}
+	else if(vexRT[Btn6U] && !isSwitchingSpeeds)
+	{
+		shootSpeed -= 5;
+		isSwitchingSpeeds = true;
+	}
+	else if(vexRT[Btn8D])
+	{
+		shootSpeed = 0;
+	}
+	else if(vexRT[Btn8U])
+	{
+		shootSpeed = 60;
+	}
+
+	if(!vexRT[Btn6U] && !vexRT[Btn6D])
+	{
+		isSwitchingSpeeds = false;
+	}
 	motor[leftShooter] = shootSpeed;
 	motor[rightShooter] = shootSpeed;
 }
+////////////////////////////////////////////////////////////////////////////////////
+
+void ctrl_ramp()
+{
+	int power_in = vexRT[Btn7U] ? 127 : vexRT[Btn7D] ? -127 : 0;
+
+	motor[ramp] = power_in;
+
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -109,7 +145,7 @@ task main()
 		drive();
 		ctrl_intake();
 		ctrl_shooter();
-
+		ctrl_ramp();
 	}
 
 
