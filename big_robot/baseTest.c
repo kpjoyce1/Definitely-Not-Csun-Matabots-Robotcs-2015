@@ -1,5 +1,6 @@
 #pragma config(UART_Usage, UART1, uartVEXLCD, baudRate19200, IOPins, None, None)
 #pragma config(I2C_Usage, I2C1, i2cSensors)
+#pragma config(Sensor, in1,    lineFollower,   sensorLineFollower)
 #pragma config(Sensor, in8,    gyro,           sensorGyro)
 #pragma config(Sensor, I2C_1,  ,               sensorQuadEncoderOnI2CPort,    , AutoAssign)
 #pragma config(Sensor, I2C_2,  ,               sensorQuadEncoderOnI2CPort,    , AutoAssign)
@@ -33,6 +34,9 @@
 #define DEADZONE 15
 #define MAXSPEED 120
 #define MINSPEED 0
+
+#define NearShot 50
+#define FarShot  95
 
 int shootSpeed = MINSPEED;
 int shootMode = 0;
