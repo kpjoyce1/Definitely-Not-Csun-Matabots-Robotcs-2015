@@ -1,0 +1,6 @@
+->Objetivo: Criar um robo que anda na direcao do joystic, como em um video-game. Por exemplo, quando virar o joystic pro lado, nao eh para ele ficar girando, eh pra ir reto na direcao escolhida
+->Material a ser utilizado:
+---> Giroscopio
+->Brainstorm
+---> Eh necessario desenvolver um sistema para recalibrar o giroscopio. Uma ideia pra fazer isso eh utilizar um botao para enviar o robot ao zero, e dai outros dois botoes promovem variacoes angulares discreta, ate que um quarto botao eh pressionado e reseta o zero. Se vc observar bem, o primeiro botao eh dispensavel entao bastam tres botoes
+ 
