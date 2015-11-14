@@ -2,8 +2,10 @@
 #pragma config(I2C_Usage, I2C1, i2cSensors)
 #pragma config(Sensor, in1,    lineFollower,   sensorLineFollower)
 #pragma config(Sensor, in8,    gyro,           sensorGyro)
-#pragma config(Sensor, I2C_1,  ,               sensorQuadEncoderOnI2CPort,    , AutoAssign)
-#pragma config(Sensor, I2C_2,  ,               sensorQuadEncoderOnI2CPort,    , AutoAssign)
+#pragma config(Sensor, dgtl1,  rightShooterSensor, sensorQuadEncoder)
+#pragma config(Sensor, dgtl3,  leftShooterSensor, sensorQuadEncoder)
+#pragma config(Sensor, I2C_1,  leftDriveSensor,               sensorQuadEncoderOnI2CPort,    , AutoAssign)
+#pragma config(Sensor, I2C_2,  rightDriveSensor,               sensorQuadEncoderOnI2CPort,    , AutoAssign)
 #pragma config(Motor,  port1,           leftBack,      tmotorVex393_HBridge, openLoop, encoderPort, I2C_1)
 #pragma config(Motor,  port2,           leftCenter,    tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port3,           leftFront,     tmotorVex393_MC29, openLoop)
@@ -31,19 +33,34 @@
 #include "Vex_Competition_Includes.c"
 
 #define PI 3.1415
-#define DEADZONE 15
+#define DEADZONE 20
 #define MAXSPEED 120
 #define MINSPEED 0
-
 #define NearShot 50
 #define FarShot  95
+#define PROPORTIONAL_GAIN 1.25 //1.25
+#define SAMPLE_PERIOD 100
+#define INTEGRAL_CONST 990.0 //990
+#define SATURATION_UP 120
+#define SATURATION_DOWN 0
+#define MOTOR_DEADZONE 20
+#define Kp 0.5
+#define SAMPLEPERIODDRIVE 20
+#define ACCURACYDRIVE 0.05
 
-int shootSpeed = MINSPEED;
-int shootMode = 0;
+const float B0 = PROPORTIONAL_GAIN*(1+SAMPLE_PERIOD/(2*INTEGRAL_CONST));
+const float B1 = PROPORTIONAL_GAIN*(SAMPLE_PERIOD/(2*INTEGRAL_CONST)-1);
+
+int potencia_motor_esquerdo, potencia_motor_direito;
+int velocidade_motor_esquerdo, velocidade_motor_direito;
+
+int line = 0;
+
+int wheelSpeed = 0;
 int DriveMode = -1;
+int shootMode = 0;
 bool isSwitchingModes = false;
 bool isSwitchingSpeeds = false;
-
 //Sturctures
 ////////////////////////////////////////////////////////////////////////////////////
 typedef struct robot
@@ -72,164 +89,43 @@ typedef struct Gyroscope
 	float driftConstant;
 }Gyroscope;
 
-/*  Movement types
-//////////////////////////////////////////////////////////////////////
-Planning on adding movements
-for holonomic drive
-                    */
 
-const int	Forward = 11;
-const int  Reverse = -11;
-//const int  TurnLeft = 9;
-//const int  TurnRight = -9;
-//const int  Stop = 10;
+typedef struct {
+  tMotor name1; //this have to be rewied, whatever to be that keywork that identify the motor
+  tSensors sensorname;
+  int speedSet; //speed desired to the motor
+  float lastError; //last error calculated for that motor
+  float controller_output; //controller output to the motor
+  float speedRead; //speed calculated from the encoder values
+  int lastEncoderRead; //last encoder read. Necessary to calulate the speed
+} MOTOR_PI;
 
-//////////////////////////////////////////////////////////////////////
 
-//Mapping Tasks and Methods
-/*
-  Mapping will be using an x,y, theta system
-  The initial start of the vehicle will determine
-  the x direction with the reference angle along
-  the x axis, perpendicular to this will be the
-  y axis. The initial position will be measured
-  and after this the position will be updated.
-  Currently the method of updating will be through
-  gyroscope and drive encoders
-*/
+typedef struct {
+  tMotor name1, name2, name3; //this have to be rewied, whatever to be that keywork that identify the motor
+  tSensors encoder, gyroscope;
+  float positionSet; //speed desired to the motor
+  float lastError; //last error calculated for that motor
+  float controller_output; //controller output to the motor
+  float positionRead; //speed calculated from the encoder values
+  int lastEncoderRead; //last encoder read. Necessary to calulate the speed
+} MOTOR_DRIVE;
 
-task updatePosition();
-void zeroOutSensors();
-int average(float value1, float value2);
-int getTicks();
-void initializeSturctures(robot *pos, encoder *left, encoder *right, Gyroscope *scope);
-float ticksToCm(int ticks);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void initMotor (MOTOR_PI* motorA, tMotor title1, tSensors sensor);
+void initDriveMotor (MOTOR_DRIVE* motorA, tMotor title1, tMotor title2, tMotor title3, tSensors encoder, tSensors gyroscope);
+void shooter(MOTOR_PI* motorA, MOTOR_PI* motorB);
+void ControlFunction(MOTOR_PI* motorA, MOTOR_PI* motorB);
+void PI_Control(MOTOR_PI* motorA);
+void ReadSpeed(MOTOR_PI* motorA, int time);
 
 //Initialize structures
 //////////////////////////////////////////////////////////////////////
 
-/*  Initialize robot position  */
-struct robot bigBot;
-
-
-/*  Initialize encoders  */
-struct encoder leftEnc, rightEnc;
-
-/*  Initialize gyroscope */
-struct Gyroscope gyroscope;
-
-//////////////////////////////////////////////////////////////////////
-
-void zeroOutSensors()
-{
-  SensorValue[gyro] = 0;
-  nMotorEncoder[leftBack] = 0;
-  nMotorEncoder[rightBack] = 0;
-  //SensorValue[leftDriveEnc] = 0;
-  //SensorValue[rightDriveEnc] = 0;
-}
-
-//////////////////////////////////////////////////////////////////////
-
-void initializeSturctures(robot *pos, encoder *left, encoder *right, Gyroscope *scope)
-{
-	pos->currX = 0;
-	pos->currY = 0;
-	pos->prevX = 0;
-	pos->prevY = 0;
-	pos->currTheta = 0;
-	pos->prevTheta = 0;
-
-	left->currTick = 0;
-	left->prevTick = 0;
-	left->gearRatio = 1;
-	left->gearEfficiency = 0.81;
-
-	right->currTick = 0;
-	right->prevTick = 0;
-	right->gearRatio = 1;
-	right->gearEfficiency = 0.81;
-
-	scope->currReading = 0;
-	scope->prevReading = 0;
-
-	scope->cummulativeDrift = 0;
-	scope->driftConstant = 1;
-
-}
-
-//////////////////////////////////////////////////////////////////////
-
-task updatePosition()
-{
-  /*
-    Use movement type to define how to get distance
-    Use gyro to define the angle
-    Create vector and add to original values
-   */
-
-  while(true){
-    leftEnc.currTick = nMotorEncoder[leftBack];  //(SensorValue[leftDriveEnc] + SensorValue[leftDriveEnc2]) / 2;
-    rightEnc.currTick = nMotorEncoder[rightBack]; //(SensorValue[rightDriveEnc] + SensorValue[rightDriveEnc]) / 2;
-
-
-    int distance = ticksToCm(getTicks());//Get distance
-
-		bigBot.currTheta = SensorValue[gyro] / 10. * PI / 180.;//Get angle
-
-		bigBot.currX +=  cos(bigBot.currTheta) * distance;
-		bigBot.currY +=  sin(bigBot.currTheta) * distance;
-
-		clearLCDLine(0);
-		clearLCDLine(1);
-		char angle[20];
-		sprintf(angle, "Angle: %.5f", bigBot.currTheta);
-		displayLCDCenteredString(1, angle);
-
-		char position[20];
-		sprintf(position, "%.2f,%.2f",bigBot.currX, bigBot.currY);
-		displayLCDCenteredString(0, position);
-
-		time1[T3] = 0;
-
-    while(time1[T3] < 200){} /*  Wait for 100 miliseconds to update */
-
-    bigBot.prevTheta = bigBot.currTheta;
-    leftEnc.prevTick = leftEnc.currTick;
-    rightEnc.prevTick = rightEnc.currTick;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////
-
-int getTicks()
-{
-
-  int driveConfig  =  (sgn(nMotorEncoder[leftBack]) * 10 - sgn(nMotorEncoder[rightBack]));//(sgn(motor[leftDriveEnc]) * 10 - sgn(motor[rightDriveEnc]));
-
-	if(driveConfig == Forward || driveConfig == Reverse){
-    return average((leftEnc.currTick - leftEnc.prevTick), (rightEnc.currTick - rightEnc.prevTick));
-  }
-  else //if(driveConfig == TurnLeft || driveConfig == TurnRight || driveConfig == Stop)
-  {
-    return 0; /* Only angle should change unless stopped */
-  }
-
-}
-
-//////////////////////////////////////////////////////////////////////
-
-int average(float value1, float value2)
-{
-  return (value1 + value2) / 2.;
-}
-
-//////////////////////////////////////////////////////////////////////
-
-float ticksToCm(int ticks)
-{
-		return 2. * PI * (5.1) * (float)(ticks) / 360.;
-}
+MOTOR_PI motorLeftShooter, motorRightShooter;
+MOTOR_DRIVE motorRightDrive, motorLeftDrive;
 //////////////////////////////////////////////////////////////////////
 
 void drive()
@@ -286,52 +182,199 @@ void ctrl_intake()
 
 }
 
+////////////////////////////////////////////////////////////////////////////////////6
+
+void ReadSpeed(MOTOR_PI* motorA, int time){
+  int encoder;
+  encoder = SensorValue[(*motorA).sensorname];
+  (*motorA).speedRead = abs(11.1*(float)(encoder - (*motorA).lastEncoderRead)/((float)time) ); //that is not a unit. You should multiply for a constant. I will leave this way by now.
+  (*motorA).lastEncoderRead = encoder;
+}
+
+void ControlFunction(MOTOR_PI* motorA, MOTOR_PI* motorB){
+	int storeTime;
+	storeTime=time1[T1];
+	if(storeTime >= SAMPLE_PERIOD/2){
+		ReadSpeed(motorA, storeTime);
+		ReadSpeed(motorB, storeTime);
+		clearTimer(T1);
+	}
+	if(time1[T2] >= SAMPLE_PERIOD){
+		PI_Control(motorA);
+  	PI_Control(motorB);
+		clearTimer(T2);
+	}
+}
+
+
+float output;
+
+void ControlDriveFunction(MOTOR_DRIVE* motorA, MOTOR_DRIVE* motorB){
+	int sampleA1 = 0;
+	int sampleA2 = 0;
+	int sampleB1 = 0;
+	int sampleB2 = 0;
+	//float output;
+	float proportion;
+	clearTimer(T3);
+
+	while((abs(sampleA1-sampleA2) > ACCURACYDRIVE*motorA->positionSet || abs(sampleB1 - sampleB2) > ACCURACYDRIVE*motorB->positionSet)
+		     || (sampleA1<0.5*motorA->positionSet || sampleA1<0.5*motorB->positionSet)){
+
+	  if( time1[T3]  > SAMPLEPERIODDRIVE)
+		{
+			sampleA2=sampleA1;
+			sampleA1 = nMotorEncoder[motorA->encoder];
+			sampleB2=sampleB1;
+			sampleB1 = -nMotorEncoder[motorB->encoder];
+			time1[T3] = 0;
+  	}
+
+
+		proportion = motorA->positionSet - SensorValue[motorA->encoder];
+		motorA->controller_output = Kp * proportion;
+
+		if (motorA->controller_output > 1) output = motorA->controller_output+MOTOR_DEADZONE;
+		else if(abs(motorA->controller_output) < 1) output=0;
+		else output = motorA->controller_output - MOTOR_DEADZONE; // if (motorA->controller_output < -1)
+		motor[motorA->name1] = output;
+		motor[motorA->name2] = output;
+		motor[motorA->name3] = output;
+
+	  proportion = motorB->positionSet + SensorValue[motorB->encoder];
+	  motorB->controller_output = Kp * proportion;
+
+		if (motorB->controller_output > 1) output = motorB->controller_output+MOTOR_DEADZONE;
+		else if(abs(motorB->controller_output) < 1) output=0;
+		else output = motorB->controller_output - MOTOR_DEADZONE;
+		motor[motorB->name1] = output;
+		motor[motorB->name2] = output;
+		motor[motorB->name3] = output;
+	}
+	motor[motorA->name1] = 0;
+	motor[motorA->name2] = 0;
+	motor[motorA->name3] = 0;
+	motor[motorB->name1] = 0;
+	motor[motorB->name2] = 0;
+	motor[motorB->name3] = 0;
+}
+
+void PI_Control(MOTOR_PI* motorA){
+    float erroPast1;
+		float output;
+    //make the calculation for the controller inputs
+    erroPast1 = (*motorA).lastError;
+    (*motorA).lastError = (*motorA).speedSet-(*motorA).speedRead;
+
+    //apply control`s law
+    (*motorA).controller_output = (*motorA).controller_output+B0*((*motorA).lastError)+B1*erroPast1;
+
+   	// The motor is having a problema when stopping. The controler output does not goes to 0, so it is supplying the motor with power, eventhough it is
+		// not running. This is meant to solve this problem
+		if ((*motorA).speedSet == 0) (*motorA).controller_output = 0;
+
+    //apply saturation of the controller
+    if ( (*motorA).controller_output > SATURATION_UP ) output = SATURATION_UP;
+    else if ( (*motorA).controller_output < SATURATION_DOWN ) output = SATURATION_DOWN;
+    else if ( (*motorA).controller_output < MOTOR_DEADZONE && (*motorA).controller_output > -MOTOR_DEADZONE ) output = 0;
+		else output = (*motorA).controller_output;
+
+    //set power in the motor
+    motor[(*motorA).name1] = output;
+
+    //the controler output can`t be less the saturation dowm
+    if ( (*motorA).controller_output < SATURATION_DOWN ) (*motorA).controller_output = SATURATION_DOWN;
+}
+void initMotor (MOTOR_PI* motorA, tMotor title1, tSensors sensor){
+		(*motorA).name1 = title1;
+		(*motorA).sensorname = sensor;
+    (*motorA).speedSet = 0;
+    (*motorA).lastError = 0;
+    (*motorA).controller_output = 0;
+    (*motorA).speedRead = 0.0;
+    (*motorA).lastEncoderRead = 0;
+}
+
+void initDriveMotor (MOTOR_DRIVE* motorA, tMotor title1, tMotor title2, tMotor title3, tSensors encoder, tSensors gyroscope){
+		(*motorA).name1 = title1;
+		(*motorA).name2 = title2;
+		(*motorA).name3 = title3;
+		(*motorA).encoder = encoder;
+		(*motorA).gyroscope = gyroscope;
+    (*motorA).positionSet = 0;
+    (*motorA).lastError = 0;
+    (*motorA).controller_output = 0;
+    (*motorA).positionRead = 0.0;
+    (*motorA).lastEncoderRead = 0;
+}
+
+
+bool RT8U;
+bool RT8D;
+
 ////////////////////////////////////////////////////////////////////////////////////
-
-void ctrl_shooter()
+void shooter(MOTOR_PI* motorA, MOTOR_PI* motorB)
 {
-	/*
-	if(vexRT[Btn6D] == 1)
-	{
-		shootMode = 0;
-	}
-	else if(vexRT[Btn8U] == 1)
-	{
-		shootMode = 1;
-	}
-	else if(vexRT[Btn8D] == 1)
-	{
-		shootMode = 2;
-	}
 
-	shootSpeed = shootMode == 0 ? 0 : shootMode == 1 ? 95 : shootMode == 2 ? 57 : 0;
-	*/
+/////////////
+	if(vexRT[Btn8U] == 1){
+		if(!RT8U) wheelSpeed++;
+		RT8U=true;
+	}
+	else RT8U = false;
+///////////////////
+	if(vexRT[Btn8R] == 1)
+		wheelSpeed = 70;
+///////////////////
+	if(vexRT[Btn8D] == 1){
+		if(!RT8D) wheelSpeed--;
+		RT8D=true;
+	}
+	else RT8D = false;
+///////////////////
+	if(vexRT[Btn8L] == 1)
+		wheelSpeed = 50;
 
-	if(vexRT[Btn6D] && !isSwitchingSpeeds)
+	if(vexRT[Btn6U] == 1)
 	{
-		shootSpeed += 5;
-		isSwitchingSpeeds = true;
+		(*motorA).speedSet = wheelSpeed;
+		(*motorB).speedSet = wheelSpeed;
 	}
-	else if(vexRT[Btn6U] && !isSwitchingSpeeds)
+	else if(vexRT[Btn6D] == 1)
 	{
-		shootSpeed -= 5;
-		isSwitchingSpeeds = true;
+		(*motorA).speedSet = 0;
+		(*motorB).speedSet = 0;
 	}
-	else if(vexRT[Btn8D])
-	{
-		shootSpeed = 0;
-	}
-	else if(vexRT[Btn8U])
-	{
-		shootSpeed = 60;
-	}
+	ControlFunction(motorA, motorB);
+}
 
-	if(!vexRT[Btn6U] && !vexRT[Btn6D])
+////////////////////////////////////////////////////////////////////////////////////
+//Get rid of these functions after this weekend
+
+int autonTargetSpeed; //global targetSpeed set in autonous
+
+task autonShooterControl()
+{
+	while(true)
 	{
-		isSwitchingSpeeds = false;
+		motorLeftShooter.speedSet = autonTargetSpeed;
+		motorRightShooter.speedSet = autonTargetSpeed;
+
+		ControlFunction(&motorLeftShooter, &motorRightShooter);
 	}
-	motor[leftShooter] = shootSpeed;
-	motor[rightShooter] = shootSpeed;
+}
+
+void autonMove(int targetDistance,MOTOR_DRIVE* motorA, MOTOR_DRIVE* motorB)
+{
+
+	SensorValue[motorA->encoder] = 0;
+	SensorValue[motorB->encoder] = 0;
+
+	motorA->positionSet = targetDistance;
+	motorB->positionSet = targetDistance;
+
+	ControlDriveFunction(motorA, motorB);
+
 }
 ////////////////////////////////////////////////////////////////////////////////////
 
@@ -343,12 +386,14 @@ void ctrl_ramp()
 
 }
 
+
+
 //Main Code
 //////////////////////////////////////////////////////////////////////////////////////
 
 /* Pre Auton */
 void pre_auton(){
-	zeroOutSensors();
+
 }
 
 /*                          Autonomous                            */
@@ -356,6 +401,22 @@ void pre_auton(){
 
 task autonomous(){
 
+  initMotor(&motorLeftShooter, leftShooter, leftShooterSensor);
+	initMotor(&motorRightShooter, rightShooter, rightShooterSensor);
+	initDriveMotor(&motorLeftDrive, leftFront, leftCenter, leftBack, leftDriveSensor, gyro);
+	initDriveMotor(&motorRightDrive, rightFront, rightCenter, rightBack, rightDriveSensor, gyro);
+
+
+	clearTimer(T1);
+  clearTimer(T2);
+  clearTimer(T3);
+  startTask(autonShooterControl);
+  autonTargetSpeed = 89;
+  wait1Msec(100);
+	autonMove(1000, motorLeftDrive, motorRightDrive);
+	autonMove(-1000, motorLeftDrive, motorRightDrive);
+
+  line = 405;
 
 }
 
@@ -364,18 +425,25 @@ task autonomous(){
 
 task usercontrol()
 {
+  initMotor(&motorLeftShooter, leftShooter, leftShooterSensor);
+	initMotor(&motorRightShooter, rightShooter, rightShooterSensor);
 
-	initializeSturctures(bigBot, leftEnc, rightEnc, gyroscope);
-  startTask(updatePosition);
+	clearTimer(T1);
+  clearTimer(T2);
+
 	bLCDBacklight = true;
 
   while(true)
     {
+    	shooter(&motorLeftShooter, &motorRightShooter);
     	ctrl_intake();
-    	ctrl_shooter();
     	ctrl_ramp();
-
     	drive();
+
+    	velocidade_motor_esquerdo=motorLeftShooter.speedRead;
+			potencia_motor_esquerdo=motorLeftShooter.controller_output;
+			velocidade_motor_direito=motorRightShooter.speedRead;
+			potencia_motor_direito=motorRightShooter.controller_output;
     }
 }
 
