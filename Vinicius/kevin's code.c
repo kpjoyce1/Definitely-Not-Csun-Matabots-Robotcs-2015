@@ -21,25 +21,41 @@ int deadzone;
 int wheelSpeed;
 int speedRead, speedReadr, encoder, encoderr, last, lastr, timenow;
 int checktime;
+int acheiotempo=0;
+
 task main()
 {
-
+	int flag=1;
+	int flag2=1;
 	clearTimer(T1);
+	clearTimer(T2);
 	while(true)
 	{
 		drive();
 		intake();
 		shooter();
 		timenow = time1[T1];
-		if(timenow>30){
+		if(timenow>50){
 			encoder = SensorValue[leftShooterSensor];
-    	speedRead = abs((1000.0*(encoder - last))/timenow); //that is not a unit. You should multiply for a constant. I will leave this way by now.
+    	speedRead = abs(((20*PI*0.05*1000/360)*(encoder - last))/timenow); //that is not a unit. You should multiply for a constant. I will leave this way by now.
     	last = encoder;
 			encoderr = SensorValue[rightShooterSensor];
-    	speedReadr = abs((60000.0/360.0*(encoderr - lastr))/timenow); //that is not a unit. You should multiply for a constant. I will leave this way by now.
+    	speedReadr = abs(((20*PI*0.05*1000/360)*(encoderr - lastr))/timenow); //that is not a unit. You should multiply for a constant. I will leave this way by now.
     	lastr = encoderr;
     	checktime=timenow;
     	clearTimer(T1);
+    	if((speedRead>=141)&&flag){
+    		acheiotempo=time1[T2];
+    		flag=0;
+    	}
+    	if((speedRead>0)&&flag2){
+    		clearTimer(T2);
+    		flag2=0;
+    	}
+    	if(speedRead==0){
+    		flag2=1;
+    		flag=1;
+    	}
 		}
 
    }

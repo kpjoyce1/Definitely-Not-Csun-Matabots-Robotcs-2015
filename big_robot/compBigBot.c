@@ -48,6 +48,7 @@
 #define SAMPLEPERIODDRIVE 20
 #define ACCURACYDRIVE 0.05
 
+const float A0 = 1;
 const float B0 = PROPORTIONAL_GAIN*(1+SAMPLE_PERIOD/(2*INTEGRAL_CONST));
 const float B1 = PROPORTIONAL_GAIN*(SAMPLE_PERIOD/(2*INTEGRAL_CONST)-1);
 
@@ -134,7 +135,7 @@ void drive()
 	if(vexRT[Btn7L] && !isSwitchingModes)//change modes
 	{
 
-			DriveMode = -DriveMode;
+			//DriveMode = -DriveMode;
 			isSwitchingModes = true;
 	}
 	else if(vexRT[Btn7L] == 0)
@@ -154,7 +155,6 @@ void drive()
 		motor[rightBack] = y - x;
 		motor[rightCenter] = y - x;
 		motor[rightFront] = y - x;
-
 
 	}
 	else if(DriveMode == -1) //tank drive
@@ -267,7 +267,7 @@ void PI_Control(MOTOR_PI* motorA){
     (*motorA).lastError = (*motorA).speedSet-(*motorA).speedRead;
 
     //apply control`s law
-    (*motorA).controller_output = (*motorA).controller_output+B0*((*motorA).lastError)+B1*erroPast1;
+    (*motorA).controller_output = A0*(*motorA).controller_output+B0*((*motorA).lastError)+B1*erroPast1;
 
    	// The motor is having a problema when stopping. The controler output does not goes to 0, so it is supplying the motor with power, eventhough it is
 		// not running. This is meant to solve this problem
@@ -326,14 +326,14 @@ void shooter(MOTOR_PI* motorA, MOTOR_PI* motorB)
 	if(vexRT[Btn8R] == 1)
 		wheelSpeed = 88;
 ///////////////////
-	if(vexRT[Btn8D] == 1){
+	if(vexRT[Btn8L] == 1){
 		if(!RT8D) wheelSpeed--;
 		RT8D=true;
 	}
 	else RT8D = false;
 ///////////////////
-	if(vexRT[Btn8L] == 1)
-		wheelSpeed = 62;
+	if(vexRT[Btn8D] == 1)
+		wheelSpeed = 64;
 
 	if(vexRT[Btn6U] == 1)
 	{
@@ -390,9 +390,7 @@ void move(int rightPower, int leftPower, int time)
 	time1[T4] = 0;
 	while(time1[T4] < time){}
 
-
 }
-
 
 void setIntake(int power)
 {
@@ -408,7 +406,24 @@ void ctrl_ramp()
 
 }
 
+//////////////////////////////////////////////////////////////////////////////////////
 
+void turn(int power, int degrees)
+{
+	SensorValue[gyro] = 0;
+	while(SensorValue[gyro] < abs(degrees))
+	{
+	 	motor[rightBack] = power;
+	 	motor[rightCenter] = power;
+	 	motor[rightFront] = power;
+	}
+
+	 	motor[rightBack] = 0;
+	 	motor[rightCenter] = 0;
+	 	motor[rightFront] = 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
 
 //Main Code
 //////////////////////////////////////////////////////////////////////////////////////
@@ -429,7 +444,6 @@ task autonomous(){
 	initDriveMotor(&motorLeftDrive, leftFront, leftCenter, leftBack, leftDriveSensor, gyro);
 	initDriveMotor(&motorRightDrive, rightFront, rightCenter, rightBack, rightDriveSensor, gyro);
 
-
 	clearTimer(T1);
   clearTimer(T2);
   clearTimer(T3);
@@ -438,35 +452,19 @@ task autonomous(){
 	if(blueSide)
 	{
 		autonTargetSpeed = 88;
-		move(50, 0, 1800);//started at 1600
+		move(50, 0, 1500);
 		move(0, 0, 0);
 		wait1Msec(500);
 		for(int i = 0; i < 4; i++)
 		{
 			wait1Msec(3000);
 			setIntake(120);
-			wait1Msec(1000);
-			setIntake(0);
-		}
-	}
-	else
-	{
-		autonTargetSpeed = 88;
-		move(0, 50, 1800);//started at 1600
-		move(0, 0, 0);
-		wait1Msec(500);
-		for(int i = 0; i < 4; i++)
-		{
-			wait1Msec(3000);
-			setIntake(120);
-			wait1Msec(1000);
+			wait1Msec(800);
 			setIntake(0);
 		}
 	}
 
-
-
-
+	autonTargetSpeed = 0;
 
 }
 

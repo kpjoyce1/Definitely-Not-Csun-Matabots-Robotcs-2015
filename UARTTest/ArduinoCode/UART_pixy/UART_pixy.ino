@@ -75,6 +75,7 @@ void loop()
           Serial.write(y);
           Serial.write(0x5F);
           Serial.write(0x24);
+
         }
       }
     }
