@@ -4,8 +4,13 @@
 #pragma config(Sensor, in8,    gyro,           sensorGyro)
 #pragma config(Sensor, dgtl1,  rightShooterSensor, sensorQuadEncoder)
 #pragma config(Sensor, dgtl3,  leftShooterSensor, sensorQuadEncoder)
-#pragma config(Sensor, I2C_1,  leftDriveSensor,               sensorQuadEncoderOnI2CPort,    , AutoAssign)
-#pragma config(Sensor, I2C_2,  rightDriveSensor,               sensorQuadEncoderOnI2CPort,    , AutoAssign)
+#pragma config(Sensor, dgtl5,  leftDriveEnc,   sensorQuadEncoder)
+#pragma config(Sensor, dgtl7,  rightDriveEnc,  sensorQuadEncoder)
+#pragma config(Sensor, dgtl9,  leftBumper,     sensorTouch)
+#pragma config(Sensor, dgtl10, rightBumper,    sensorTouch)
+#pragma config(Sensor, dgtl11, intakeSensor,   sensorSONAR_cm)
+#pragma config(Sensor, I2C_1,  leftDriveSensor, sensorQuadEncoderOnI2CPort,    , AutoAssign)
+#pragma config(Sensor, I2C_2,  rightDriveSensor, sensorQuadEncoderOnI2CPort,    , AutoAssign)
 #pragma config(Motor,  port1,           leftBack,      tmotorVex393_HBridge, openLoop, encoderPort, I2C_1)
 #pragma config(Motor,  port2,           leftCenter,    tmotorVex393_MC29, openLoop, reversed)
 #pragma config(Motor,  port3,           leftFront,     tmotorVex393_MC29, openLoop)
@@ -31,9 +36,13 @@
 #pragma userControlDuration(60)
 
 #include "Vex_Competition_Includes.c"
+#include "UART.h"
+#include "DriverCntrl.h"
+#include "AutonCntrl.h"
+#include "xytheta.h"
+#include "ScorePositing.h"
 
 #define PI 3.1415
-#define DEADZONE 20
 #define MAXSPEED 120
 #define MINSPEED 0
 #define NearShot 50
@@ -55,41 +64,9 @@ const float B1 = PROPORTIONAL_GAIN*(SAMPLE_PERIOD/(2*INTEGRAL_CONST)-1);
 int potencia_motor_esquerdo, potencia_motor_direito;
 int velocidade_motor_esquerdo, velocidade_motor_direito;
 
-int line = 0;
 
-int wheelSpeed = 0;
-int DriveMode = -1;
-int shootMode = 0;
-bool isSwitchingModes = false;
-bool isSwitchingSpeeds = false;
 //Sturctures
 ////////////////////////////////////////////////////////////////////////////////////
-typedef struct robot
-{
-  /* Struct to hold robots x, y, and theta relative to a starting position */
-  float currX, currY;
-  float prevX, prevY;  /* Keep prev data for PID purposes although not used yet */
-  float currTheta, prevTheta;
-  float turretAngle;
-}robot;
-
-typedef struct encoder
-{
-  /* Struct to hold encoder information and address */
-  int currTick;
-  int prevTick;
-  float gearRatio;
-  float gearEfficiency;
-}encoder;
-
-typedef struct Gyroscope
-{
-	int currReading;
-	int prevReading;
-	int cummulativeDrift;
-	float driftConstant;
-}Gyroscope;
-
 
 typedef struct {
   tMotor name1; //this have to be rewied, whatever to be that keywork that identify the motor
@@ -129,59 +106,6 @@ MOTOR_PI motorLeftShooter, motorRightShooter;
 MOTOR_DRIVE motorRightDrive, motorLeftDrive;
 //////////////////////////////////////////////////////////////////////
 
-void drive()
-{
-
-	if(vexRT[Btn7L] && !isSwitchingModes)//change modes
-	{
-
-			//DriveMode = -DriveMode;
-			isSwitchingModes = true;
-	}
-	else if(vexRT[Btn7L] == 0)
-	{
-			isSwitchingModes = false;
-	}
-
-	if(DriveMode == 1) //arcade drive
-	{
-		int y = abs(vexRT[Ch3]) < DEADZONE ? 0 : vexRT[Ch3];
-		int x = abs(vexRT[Ch1]) < DEADZONE ? 0 : vexRT[Ch1];
-
-		motor[leftBack] = y + x;
-		motor[leftCenter] = y + x;
-		motor[leftFront] = y + x;
-
-		motor[rightBack] = y - x;
-		motor[rightCenter] = y - x;
-		motor[rightFront] = y - x;
-
-	}
-	else if(DriveMode == -1) //tank drive
-	{
-		int rightPower = abs(vexRT[Ch2]) < DEADZONE ? 0 : vexRT[Ch2];
-		int leftPower  = abs(vexRT[Ch3]) < DEADZONE ? 0 : vexRT[Ch3];
-
-		motor[leftBack] = leftPower;
-		motor[leftCenter] = leftPower;
-		motor[leftFront] = leftPower;
-
-		motor[rightBack] = rightPower;
-		motor[rightCenter] = rightPower;
-		motor[rightFront] = rightPower;
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////////
-
-void ctrl_intake()
-{
-	int power_in = vexRT[Btn5U] ? 127 : vexRT[Btn5D] ? -127 : 0;
-
-	motor[intake] = power_in;
-
-}
-
 ////////////////////////////////////////////////////////////////////////////////////6
 
 void ReadSpeed(MOTOR_PI* motorA, int time){
@@ -189,6 +113,7 @@ void ReadSpeed(MOTOR_PI* motorA, int time){
   encoder = SensorValue[(*motorA).sensorname];
   (*motorA).speedRead = abs(11.1*(float)(encoder - (*motorA).lastEncoderRead)/((float)time) ); //that is not a unit. You should multiply for a constant. I will leave this way by now.
   (*motorA).lastEncoderRead = encoder;
+
 }
 
 void ControlFunction(MOTOR_PI* motorA, MOTOR_PI* motorB){
@@ -377,51 +302,8 @@ void autonMove(int targetDistance,MOTOR_DRIVE* motorA, MOTOR_DRIVE* motorB)
 
 }
 
-void move(int rightPower, int leftPower, int time)
-{
-	motor[rightBack] = rightPower;
-	motor[rightCenter] = rightPower;
-	motor[rightFront] = rightPower;
 
-	motor[leftBack] = leftPower;
-	motor[leftCenter] = leftPower;
-	motor[leftFront] = leftPower;
 
-	time1[T4] = 0;
-	while(time1[T4] < time){}
-
-}
-
-void setIntake(int power)
-{
- 	motor[intake] = power;
-}
-////////////////////////////////////////////////////////////////////////////////////
-
-void ctrl_ramp()
-{
-	int power_in = vexRT[Btn7U] ? 127 : vexRT[Btn7D] ? -127 : 0;
-
-	motor[ramp] = power_in;
-
-}
-
-//////////////////////////////////////////////////////////////////////////////////////
-
-void turn(int power, int degrees)
-{
-	SensorValue[gyro] = 0;
-	while(SensorValue[gyro] < abs(degrees))
-	{
-	 	motor[rightBack] = power;
-	 	motor[rightCenter] = power;
-	 	motor[rightFront] = power;
-	}
-
-	 	motor[rightBack] = 0;
-	 	motor[rightCenter] = 0;
-	 	motor[rightFront] = 0;
-}
 
 //////////////////////////////////////////////////////////////////////////////////////
 
@@ -438,6 +320,11 @@ void pre_auton(){
 
 task autonomous(){
 
+	configureSerial();
+
+	SearchState();
+
+/*
 	bool blueSide = true;
   initMotor(&motorLeftShooter, leftShooter, leftShooterSensor);
 	initMotor(&motorRightShooter, rightShooter, rightShooterSensor);
@@ -465,6 +352,7 @@ task autonomous(){
 	}
 
 	autonTargetSpeed = 0;
+*/
 
 }
 
@@ -475,12 +363,10 @@ task usercontrol()
 {
   initMotor(&motorLeftShooter, leftShooter, leftShooterSensor);
 	initMotor(&motorRightShooter, rightShooter, rightShooterSensor);
-
 	clearTimer(T1);
   clearTimer(T2);
-
-	bLCDBacklight = true;
-
+  clearData();
+	startTask(updatePosition);
   while(true)
     {
     	shooter(&motorLeftShooter, &motorRightShooter);
@@ -494,5 +380,7 @@ task usercontrol()
 			potencia_motor_direito=motorRightShooter.controller_output;
     }
 }
+
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

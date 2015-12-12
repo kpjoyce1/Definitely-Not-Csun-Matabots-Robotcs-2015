@@ -58,8 +58,6 @@ unsigned char rcvChars[23]; // Keep buffer of last 23 characters received.
 // }
 //}
 
-int count = 0;
-
 task UARTReceive()
 {
  while (true)

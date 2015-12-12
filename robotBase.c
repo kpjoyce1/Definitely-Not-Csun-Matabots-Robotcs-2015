@@ -305,29 +305,3 @@ task updatePosition()
     rightEnc.prevTick = rightEnc.currTick;
   }
 }
-
-
-int getTicks()
-{
-
-  int driveConfig  = (sgn(motor[leftDrive]) * 10 - sgn(motor[rightDrive]));
-
-	if(driveConfig == Forward || driveConfig == Reverse){
-    return average((leftEnc.currTick - leftEnc.prevTick), (rightEnc.currTick - rightEnc.prevTick));
-  }
-  else //if(driveConfig == TurnLeft || driveConfig == TurnRight || driveConfig == Stop)
-  {
-    return 0; /* Only angle should change unless stopped */
-  }
-
-}
-
-int average(float value1, float value2)
-{
-  return (value1 + value2) / 2.;
-}
-
-float ticksToCm(int ticks)
-{
-		return 2. * PI * (5.1) * (float)(ticks) / 360.;
-}

@@ -32,8 +32,6 @@ Pixy pixy;
 void setup()
 {
   Serial.begin(115200);
-  Serial.print("Starting...\n");
-
   pixy.init();
 }
 
@@ -54,31 +52,46 @@ void loop()
     
     // do this (print) every 50 frames because printing every
     // frame would bog down the Arduino
-    if (i%50==0)
+    if (i%2==0)
     {
-      //sprintf(buf, "Detected %d:\n", blocks);
-      //Serial.print(buf);
+
+      bool ballExists = false;
       for (j=0; j<blocks; j++)
       {
-        //sprintf(buf, "  block %d: ", j);
-        //Serial.print(buf); 
-        //pixy.blocks[j].print();
-        if(pixy.blocks[j].width > 15)
+        if(pixy.blocks[j].width > 15 && pixy.blocks[j].height > 15)
         {
-          char sig = pixy.blocks[j].signature == 1 ? 0x47 : 0x4F;
-          char x = (char)(int)pixy.blocks[j].x;
-          char y = (char)(int)pixy.blocks[j].y;
-          Serial.write(sig);
-          Serial.write(0x5F);
-          Serial.write(x);
-          Serial.write(0x5F);
-          Serial.write(y);
-          Serial.write(0x5F);
-          Serial.write(0x24);
+          unsigned char sig = pixy.blocks[j].signature == 1 ? 0x47 : 0x4F;
+          int x = pixy.blocks[j].x;
+          int y = pixy.blocks[j].y;
 
-        }
+          if(x < 255 && y < 255)
+          {
+            Serial.write(0x23);
+            Serial.write(sig);
+            Serial.write(0x5F);
+            Serial.write((char)x);
+            Serial.write(0x5F);
+            Serial.print((char)y);
+            Serial.write('\n');
+          }
+          ballExists = true;
+        }     
+        
+      }
+      
+      if(!ballExists)
+      {
+          Serial.write(0x23);
+          Serial.write('N');
+          Serial.write(0x5F);
+          Serial.write(-1);
+          Serial.write(0x5F);
+          Serial.write(-1);
+          Serial.write(0x5F);          
+          Serial.write('\n');
       }
     }
+   
   }  
 }
 

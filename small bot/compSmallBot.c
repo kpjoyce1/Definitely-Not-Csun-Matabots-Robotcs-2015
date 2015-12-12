@@ -218,13 +218,13 @@ void intake()
 	}
 	if(vexRT[Btn5D]==1)
 	{
-		motor[leftIntake] = 0;//-120
-		motor[rightIntake] = 0;//-120
+		motor[leftIntake] = -120;
+		motor[rightIntake] = -120;
   }
 	else if (vexRT[Btn5U]!=1 && vexRT[Btn5D]!=1)
 	{
-//		motor[leftIntake] = 0;
-//		motor[rightIntake] = 0;
+		motor[leftIntake] = 0;
+		motor[rightIntake] = 0;
 	}
 
 }
