@@ -66,13 +66,13 @@ void loop()
 
           if(x < 255 && y < 255)
           {
-            Serial.write(0x23);
+            Serial.write(0x5B);
             Serial.write(sig);
             Serial.write(0x5F);
-            Serial.write((char)x);
+            Serial.write(x);
             Serial.write(0x5F);
-            Serial.print((char)y);
-            Serial.write('\n');
+            Serial.write(y);
+            Serial.write(0x5D);
           }
           ballExists = true;
         }     
@@ -81,14 +81,14 @@ void loop()
       
       if(!ballExists)
       {
-          Serial.write(0x23);
+          Serial.write(0x5B);
           Serial.write('N');
           Serial.write(0x5F);
           Serial.write(-1);
           Serial.write(0x5F);
           Serial.write(-1);
-          Serial.write(0x5F);          
-          Serial.write('\n');
+          Serial.write(0x5F); 
+          Serial.write(0x5D);         
       }
     }
    

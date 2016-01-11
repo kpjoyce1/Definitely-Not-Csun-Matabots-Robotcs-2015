@@ -71,25 +71,53 @@ task UARTReceive()
 
 void Parse()
 {
-		int messageStart = 0;
+		int messageStart = -1;
 		bool messageExists = false;
 
 		for(int i = 0; i < messageSize; i++)
 		{
-			if(rcvChars[i] == 0x23 && i + 5 < messageSize - 1)
+			if(rcvChars[i] == 0x5B)
 			{
 				messageStart = i;
-				messageExists = true;
 			}
 
+			if(rcvChars[i] == 0x5D && i > messageStart && i != -1)
+			{
+				messageExists = true;
+		  }
 	  }
 
 
 	  if(messageExists)
 	  {
+	  	char xValue[], yValue[];
+
+	  	bool xRegion, yRegion;
+	  	for(int i = messageStart; i < messageSize; i++)
+	  	{
+	  			if(rcvChars[i] == 0x5F && !xRegion)
+	  			{
+	  					xRegion = true;
+	  			}
+	  			else if(rcvChars[i] == 0x5F)
+	  			{
+	  					yRegion = true;
+	  			}
+
+
+	  			if(yRegion)
+	  			{
+	  					yValue[0] = rcvChar[i];
+	  			}
+	  			else if(xRegion)
+	  			{
+	  					xValue[0] = rcvChar[i];
+	  			}
+
+	  	}
 	  	closestBall.sig = rcvChars[messageStart+1];
-	  	closestBall.x = rcvChars[messageStart+3];
-	  	closestBall.y = rcvChars[messageStart+5];
+	  	closestBall.x = atoi(xValue);
+	  	closestBall.y = atoi(yValue);
 	  	closestBall.updated = true;
 		}
 
