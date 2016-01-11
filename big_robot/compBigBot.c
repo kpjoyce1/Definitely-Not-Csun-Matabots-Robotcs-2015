@@ -37,10 +37,10 @@
 
 #include "Vex_Competition_Includes.c"
 #include "UART.h"
+#include "xytheta.h"
 #include "DriverCntrl.h"
 #include "AutonCntrl.h"
-#include "xytheta.h"
-#include "ScorePositing.h"
+
 
 #define PI 3.1415
 #define MAXSPEED 120
@@ -104,6 +104,7 @@ void ReadSpeed(MOTOR_PI* motorA, int time);
 
 MOTOR_PI motorLeftShooter, motorRightShooter;
 MOTOR_DRIVE motorRightDrive, motorLeftDrive;
+
 //////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////6
@@ -113,7 +114,6 @@ void ReadSpeed(MOTOR_PI* motorA, int time){
   encoder = SensorValue[(*motorA).sensorname];
   (*motorA).speedRead = abs(11.1*(float)(encoder - (*motorA).lastEncoderRead)/((float)time) ); //that is not a unit. You should multiply for a constant. I will leave this way by now.
   (*motorA).lastEncoderRead = encoder;
-
 }
 
 void ControlFunction(MOTOR_PI* motorA, MOTOR_PI* motorB){
@@ -319,40 +319,41 @@ void pre_auton(){
 /*________________________________________________________________*/
 
 task autonomous(){
-
-	configureSerial();
-
-	SearchState();
-
-/*
-	bool blueSide = true;
-  initMotor(&motorLeftShooter, leftShooter, leftShooterSensor);
+	initMotor(&motorLeftShooter, leftShooter, leftShooterSensor);
 	initMotor(&motorRightShooter, rightShooter, rightShooterSensor);
 	initDriveMotor(&motorLeftDrive, leftFront, leftCenter, leftBack, leftDriveSensor, gyro);
 	initDriveMotor(&motorRightDrive, rightFront, rightCenter, rightBack, rightDriveSensor, gyro);
-
-	clearTimer(T1);
-  clearTimer(T2);
-  clearTimer(T3);
 	clearAll(actOnSensors);
 	startTask(autonShooterControl);
-	if(blueSide)
+	startTask(updatePosition);
+	autonTargetSpeed = 89;
+	ballCount = 0;
+	InitialPositioning();
+	configureSerial();
+	turn(370);
+	for(int i = 0; i < 4; i++)
 	{
-		autonTargetSpeed = 88;
-		move(50, 0, 1500);
-		move(0, 0, 0);
-		wait1Msec(500);
-		for(int i = 0; i < 4; i++)
-		{
-			wait1Msec(3000);
-			setIntake(120);
-			wait1Msec(800);
-			setIntake(0);
-		}
+		wait1Msec(3000);
+		setIntake(120);
+		wait1Msec(800);
+		setIntake(0);
 	}
-
 	autonTargetSpeed = 0;
-*/
+	move(40, 100, 100);
+	//SearchState();
+	//PositioningState();
+	//autonTargetSpeed = 64;
+	//move(-70, -70, 500);
+	//autonMove(-100, motorLeftDrive, motorRightDrive);
+	//for(int i = 0; i < 4; i++)
+	//{
+	//	wait1Msec(3000);
+	//	setIntake(120);
+	//	wait1Msec(800);
+	//	setIntake(0);
+	//}
+	autonTargetSpeed = 0;
+	move(0 ,0 , 1);
 
 }
 
@@ -365,15 +366,13 @@ task usercontrol()
 	initMotor(&motorRightShooter, rightShooter, rightShooterSensor);
 	clearTimer(T1);
   clearTimer(T2);
-  clearData();
-	startTask(updatePosition);
+	configureSerial();
   while(true)
     {
     	shooter(&motorLeftShooter, &motorRightShooter);
     	ctrl_intake();
     	ctrl_ramp();
     	drive();
-
     	velocidade_motor_esquerdo=motorLeftShooter.speedRead;
 			potencia_motor_esquerdo=motorLeftShooter.controller_output;
 			velocidade_motor_direito=motorRightShooter.speedRead;

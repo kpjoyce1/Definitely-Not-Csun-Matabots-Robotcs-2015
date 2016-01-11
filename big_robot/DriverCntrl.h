@@ -8,14 +8,14 @@
 #define DEADZONE 20
 
 int wheelSpeed = 0;
-int DriveMode = -1;
+int DriveMode = 0;
 int shootMode = 0;
 bool isSwitchingModes = false;
 bool isSwitchingSpeeds = false;
 
 void drive()
 {
-
+	/*
 	if(vexRT[Btn7L] && !isSwitchingModes)//change modes
 	{
 
@@ -26,6 +26,7 @@ void drive()
 	{
 			isSwitchingModes = false;
 	}
+	*/
 
 	if(DriveMode == 1) //arcade drive
 	{
@@ -41,7 +42,7 @@ void drive()
 		motor[rightFront] = y - x;
 
 	}
-	else if(DriveMode == -1) //tank drive
+	else if(DriveMode == 0) //tank drive
 	{
 		int rightPower = abs(vexRT[Ch2]) < DEADZONE ? 0 : vexRT[Ch2];
 		int leftPower  = abs(vexRT[Ch3]) < DEADZONE ? 0 : vexRT[Ch3];

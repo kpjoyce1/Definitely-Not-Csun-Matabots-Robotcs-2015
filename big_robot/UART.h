@@ -9,9 +9,7 @@
 
 task UARTReceive();
 void Parse();
-
 int nRcvIndex = 0;
-static int nLastRcvChar = 0;
 int rcvChar;
 const int messageSize = 23;
 unsigned char rcvChars[messageSize]; // Keep buffer of last 23 characters received.

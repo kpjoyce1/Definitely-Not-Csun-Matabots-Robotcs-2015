@@ -20,18 +20,10 @@
 #pragma userControlDuration(60)
 
 #include "Vex_Competition_Includes.c"
-
-#define PROPORTIONAL_GAIN 1.5
-#define SAMPLE_PERIOD 100
-#define INTEGRAL_CONST 990.0
-#define SATURATION_UP 120
-#define SATURATION_DOWN 0
+#include "PID.h"
 #define DEADZONE 10
-#define MOTOR_DEADZONE 20
 //Mano, na boa, quem sabe o que eh essa porra dessa variavel do nome do motor definida no pragma. Agora todo mundo sabe
 //http://robotics.stackexchange.com/questions/751/confused-about-the-variables-in-robotc
-const float B0 = PROPORTIONAL_GAIN*(1+SAMPLE_PERIOD/(2*INTEGRAL_CONST));
-const float B1 = PROPORTIONAL_GAIN*(SAMPLE_PERIOD/(2*INTEGRAL_CONST)-1);
 
 
 //for debug purpose
@@ -39,24 +31,10 @@ int potencia_motor_esquerdo, potencia_motor_direito;
 int velocidade_motor_esquerdo, velocidade_motor_direito;
 int autonTargetSpeed;
 
-typedef struct {
-  tMotor name1, name2; //this have to be rewied, whatever to be that keywork that identify the motor
-  tSensors sensorname;
-  int speedSet; //speed desired to the motor
-  float lastError; //last error calculated for that motor
-  float controller_output; //controller output to the motor
-  float speedRead; //speed calculated from the encoder values
-  int lastEncoderRead; //last encoder read. Necessary to calulate the speed
-} MOTOR_PI;
-
-void initMotor (MOTOR_PI* motorA, tMotor title1, tMotor title2, tSensors sensor);
 void drive();
 void intake();
 void shooter(MOTOR_PI* motorA, MOTOR_PI* motorB);
 task autonShooterControl();
-void ControlFunction(MOTOR_PI* motorA, MOTOR_PI* motorB);
-void PI_Control(MOTOR_PI* motorA);
-void ReadSpeed(MOTOR_PI* motorA, int time);
 
 void move(int rightPower, int leftPower, int time);
 void setIntake(int power);
@@ -72,8 +50,8 @@ void pre_auton(){
 task autonomous(){
 
 	bool blueSide = true;
-	initMotor(&motorLeftShooter, leftShooter1, leftShooter2, leftShooterSensor);
-	initMotor(&motorRightShooter, rightShooter1, rightShooter2, rightShooterSensor);
+	shooter_MotorInit(&motorLeftShooter, leftShooter1, leftShooter2, leftShooterSensor);
+	shooter_MotorInit(&motorRightShooter, rightShooter1, rightShooter2, rightShooterSensor);
 	clearAll(actOnSensors);
 	startTask(autonShooterControl);
 	if(blueSide)
@@ -96,8 +74,8 @@ task autonomous(){
 /* User Control */
 task usercontrol()
 {
-	initMotor(&motorLeftShooter, leftShooter1, leftShooter2, leftShooterSensor);
-	initMotor(&motorRightShooter, rightShooter1, rightShooter2, rightShooterSensor);
+	shooter_MotorInit(&motorLeftShooter, leftShooter1, leftShooter2, leftShooterSensor);
+	shooter_MotorInit(&motorRightShooter, rightShooter1, rightShooter2, rightShooterSensor);
   clearAll(actOnSensors);
 	clearTimer(T1);
   clearTimer(T2);
@@ -174,7 +152,7 @@ void shooter(MOTOR_PI* motorA, MOTOR_PI* motorB)
 		(*motorA).speedSet = 0;
 		(*motorB).speedSet = 0;
 	}
-	ControlFunction(motorA, motorB);
+	shooter_Control(motorA, motorB);
 }
 
 void intake()
@@ -199,66 +177,6 @@ void intake()
 
 
 
-void ReadSpeed(MOTOR_PI* motorA, int time){
-  int encoder;
-  encoder = SensorValue[(*motorA).sensorname];
-  (*motorA).speedRead = abs(5.88235*(float)(encoder - (*motorA).lastEncoderRead)/((float)time) ); //that is not a unit. You should multiply for a constant. I will leave this way by now.
-  (*motorA).lastEncoderRead = encoder;
-}
-
-void ControlFunction(MOTOR_PI* motorA, MOTOR_PI* motorB){
-	int storeTime;
-	storeTime=time1[T1];
-	if(storeTime >= SAMPLE_PERIOD/2){
-		ReadSpeed(motorA, storeTime);
-		ReadSpeed(motorB, storeTime);
-		clearTimer(T1);
-	}
-	if(time1[T2] >= SAMPLE_PERIOD){
-		PI_Control(motorA);
-  	PI_Control(motorB);
-		clearTimer(T2);
-	}
-}
-
-void PI_Control(MOTOR_PI* motorA){
-    float erroPast1;
-		float output;
-    //make the calculation for the controller inputs
-    erroPast1 = (*motorA).lastError;
-    (*motorA).lastError = (*motorA).speedSet-(*motorA).speedRead;
-
-    //apply control`s law
-    (*motorA).controller_output = (*motorA).controller_output+B0*((*motorA).lastError)+B1*erroPast1;
-
-   	// The motor is having a problema when stopping. The controler output does not goes to 0, so it is supplying the motor with power, eventhough it is
-		// not running. This is meant to solve this problem
-		if ((*motorA).speedSet == 0) (*motorA).controller_output = 0;
-
-    //apply saturation of the controller
-    if ( (*motorA).controller_output > SATURATION_UP ) output = SATURATION_UP;
-    else if ( (*motorA).controller_output < SATURATION_DOWN ) output = SATURATION_DOWN;
-    else if ( (*motorA).controller_output < MOTOR_DEADZONE && (*motorA).controller_output > -MOTOR_DEADZONE ) output = 0;
-		else output = (*motorA).controller_output;
-
-    //set power in the motor
-    motor[(*motorA).name1] = output;
-    motor[(*motorA).name2] = output;
-
-    //the controler output can`t be less the saturation dowm
-    if ( (*motorA).controller_output < SATURATION_DOWN ) (*motorA).controller_output = SATURATION_DOWN;
-}
-void initMotor (MOTOR_PI* motorA, tMotor title1, tMotor title2, tSensors sensor){
-		(*motorA).name1 = title1;
-		(*motorA).name2 = title2;
-		(*motorA).sensorname = sensor;
-    (*motorA).speedSet = 0;
-    (*motorA).lastError = 0;
-    (*motorA).controller_output = 0;
-    (*motorA).speedRead = 0.0;
-    (*motorA).lastEncoderRead = 0;
-}
-
 task autonShooterControl()
 {
 	while(true)
@@ -266,7 +184,7 @@ task autonShooterControl()
 		motorLeftShooter.speedSet = autonTargetSpeed;
 		motorRightShooter.speedSet = autonTargetSpeed;
 
-		ControlFunction(&motorLeftShooter, &motorRightShooter);
+		shooter_Control(&motorLeftShooter, &motorRightShooter);
 
 		velocidade_motor_esquerdo=motorLeftShooter.speedRead;
 		potencia_motor_esquerdo=motorLeftShooter.controller_output;

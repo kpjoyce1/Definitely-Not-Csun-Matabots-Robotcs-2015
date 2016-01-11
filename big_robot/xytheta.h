@@ -6,18 +6,17 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //Movement Types
-const int	Forward = 11;
-const int Reverse = -11;
+//const int	Forward = 11;
+//const int Reverse = -11;
 const int  TurnLeft = 9;
 const int  TurnRight = -9;
-const int Idle = 0;
+//const int Idle = 0;
 
 task updatePosition();
-void zeroOutSensors();
 int average(float value1, float value2);
 int getTicks();
 float ticksToCm(int ticks);
-void clearData();
+void InitialPositioning();
 
 typedef struct
 {
@@ -36,15 +35,11 @@ typedef struct
   float gearRatio;
 }encoder;
 
-
 /*  Initialize robot position  */
-robot robotBase;
-
+robot bigBot;
 
 /*  Initialize encoders  */
 encoder leftEnc, rightEnc;
-
-/*  Initialize gyroscope */
 
 
 task updatePosition()
@@ -58,18 +53,17 @@ task updatePosition()
   while(true){
     leftEnc.currTick = SensorValue[leftDriveEnc];
     rightEnc.currTick = SensorValue[rightDriveEnc];
-		robotBase.currTheta = SensorValue[gyro] / 10. * PI / 180.;//Get angle;
+		bigBot.currTheta = SensorValue[gyro] / 10. * PI / 180.;//Get angle;
 
     int distance = ticksToCm(getTicks());//Get distance
 
-		robotBase.currX +=  cos(robotBase.currTheta) * distance;
-		robotBase.currY +=  sin(robotBase.currTheta) * distance;
+		bigBot.currX +=  cos(bigBot.currTheta) * distance;
+		bigBot.currY +=  sin(bigBot.currTheta) * distance;
 
 		time1[T4] = 0;
+    while(time1[T4] < 100){} /*  Wait for 100 miliseconds to update */
 
-    while(time1[T4] < 200){} /*  Wait for 100 miliseconds to update */
-
-    robotBase.prevTheta = robotBase.currTheta;
+    bigBot.prevTheta = bigBot.currTheta;
     leftEnc.prevTick = leftEnc.currTick;
     rightEnc.prevTick = rightEnc.currTick;
   }
@@ -101,9 +95,14 @@ float ticksToCm(int ticks)
 		return 2. * PI * (5.08) * (float)(ticks) / 360.; //2 * pi * r * ratio of angle ticks : 360
 }
 
-void clearData()
+void InitialPositioning()
 {
-	robotBase.currX = 0;
-	robotBase.currY = 0;
-	robotBase.currTheta = 0;
+	SensorValue[gyro] = 0;
+	SensorValue[rightDriveEnc] = 0;
+	SensorValue[leftDriveEnc] = 0;
+
+	bigBot.currX =  35.56;
+	bigBot.currY =  96.52;
+	bigBot.currTheta = 0;
+
 }
