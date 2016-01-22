@@ -78,7 +78,7 @@ void PI_Control(MOTOR_PI* motorA){
     //apply control`s law
     if(abs((*motorA).speedRead - (*motorA).speedSet)<PI_RANGE){
     	if((*motorA).proportional) {
-    		(*motorA).controller_output = PI_SETUP;
+    		(*motorA).controller_output = (*motorA).speedSet; //was PI_SETUP
     		(*motorA).proportional= false;
     	}
 			(*motorA).controller_output = A0*(*motorA).controller_output+B0*((*motorA).errorK0speed)+B1*errorK1speed;
