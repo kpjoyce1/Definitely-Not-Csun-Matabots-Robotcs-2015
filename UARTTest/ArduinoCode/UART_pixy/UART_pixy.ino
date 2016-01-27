@@ -61,17 +61,23 @@ void loop()
         if(pixy.blocks[j].width > 15 && pixy.blocks[j].height > 15)
         {
           unsigned char sig = pixy.blocks[j].signature == 1 ? 0x47 : 0x4F;
-          int x = pixy.blocks[j].x;
-          int y = pixy.blocks[j].y;
+          String x = String(pixy.blocks[j].x, DEC);
+          String y = String(pixy.blocks[j].y, DEC);
 
-          if(x < 255 && y < 255)
+          if(x.toInt() < 255 && y.toInt() < 255)
           {
             Serial.write(0x5B);
             Serial.write(sig);
             Serial.write(0x5F);
-            Serial.write(x);
+            for(int i = 0; i < x.length(); i++)
+            {
+              Serial.write(x[i]);
+            }
             Serial.write(0x5F);
-            Serial.write(y);
+            for(int i = 0; i < y.length(); i++)
+            {
+              Serial.write(y[i]);
+            }
             Serial.write(0x5D);
           }
           ballExists = true;
@@ -80,7 +86,7 @@ void loop()
       }
       
       if(!ballExists)
-      {
+      {         
           Serial.write(0x5B);
           Serial.write('N');
           Serial.write(0x5F);

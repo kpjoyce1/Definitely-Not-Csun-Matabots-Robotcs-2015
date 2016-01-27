@@ -4,16 +4,12 @@
 //
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
 task UARTReceive();
 void Parse();
 int nRcvIndex = 0;
 int rcvChar;
 const int messageSize = 23;
 unsigned char rcvChars[messageSize]; // Keep buffer of last 23 characters received.
-
 
 typedef struct {
 
@@ -23,7 +19,6 @@ typedef struct {
 	bool updated;
 
 } Ball;
-
 
 Ball closestBall, targetBall;
 
@@ -67,8 +62,6 @@ task UARTReceive()
  	}
 }
 
-
-
 void Parse()
 {
 		int messageStart = -1;
@@ -104,7 +97,6 @@ void Parse()
 	  			{
 	  					yRegion = true;
 	  			}
-
 
 	  			if(yRegion)
 	  			{
