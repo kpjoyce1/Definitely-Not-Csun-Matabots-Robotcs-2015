@@ -24,6 +24,7 @@ typedef struct
   float currX, currY;
   float prevX, prevY;  /* Keep prev data for PID purposes although not used yet */
   float currTheta, prevTheta;
+  float turretAngle;
 }robot;
 
 typedef struct
@@ -48,6 +49,7 @@ task updatePosition()
     Use gyro to define the angle
     Create vector and add to original values
    */
+
   while(true){
     leftEnc.currTick = SensorValue[leftDriveEnc];
     rightEnc.currTick = SensorValue[rightDriveEnc];

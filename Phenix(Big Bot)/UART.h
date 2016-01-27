@@ -93,7 +93,6 @@ void Parse()
 	  	char xValue[], yValue[];
 
 	  	bool xRegion, yRegion;
-	  	int xIndex, yIndex;
 	  	for(int i = messageStart; i < messageSize; i++)
 	  	{
 	  			if(rcvChars[i] == 0x5F && !xRegion)
@@ -108,13 +107,11 @@ void Parse()
 
 	  			if(yRegion)
 	  			{
-	  					yValue[yIndex] = rcvChar[i];
-	  					yIndex++;
+	  					yValue[0] = rcvChar[i];
 	  			}
 	  			else if(xRegion)
 	  			{
-	  					xValue[xIndex] = rcvChar[i];
-	  					xIndex++;
+	  					xValue[0] = rcvChar[i];
 	  			}
 
 	  	}
