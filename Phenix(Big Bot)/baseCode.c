@@ -37,7 +37,6 @@ task main()
 
 void drive()
 {
-
 	if(vexRT[Ch2]>DEADZONE || vexRT[Ch2]<-DEADZONE)
 	{
 		motor[leftDrive]=vexRT[Ch2];

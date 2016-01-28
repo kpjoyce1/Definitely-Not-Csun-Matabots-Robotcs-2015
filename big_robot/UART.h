@@ -83,7 +83,7 @@ void Parse()
 
 	  if(messageExists)
 	  {
-	  	char xValue[], yValue[];
+	  	char xValue[3], yValue[3];
 
 	  	bool xRegion, yRegion;
 	  	int xIndex, yIndex;
