@@ -5,70 +5,48 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define DEADZONE 20
 
-int wheelSpeed = 0;
-int DriveMode = 0;
-int shootMode = 0;
-bool isSwitchingModes = false;
-bool isSwitchingSpeeds = false;
+#define DEADZONE 10
+
+int shootSpeed = 0;
+
+
+void drive();
+void cntrl_intake1();
+void cntrl_intake2();
+void shooter();
+
 
 void drive()
 {
-	/*
-	if(vexRT[Btn7L] && !isSwitchingModes)//change modes
-	{
 
-			//DriveMode = -DriveMode;
-			isSwitchingModes = true;
-	}
-	else if(vexRT[Btn7L] == 0)
-	{
-			isSwitchingModes = false;
-	}
-	*/
+	int leftPower = abs(vexRT[Ch2]) > DEADZONE ? vexRT[Ch2] : 0;
 
-	if(DriveMode == 1) //arcade drive
-	{
-		int y = abs(vexRT[Ch3]) < DEADZONE ? 0 : vexRT[Ch3];
-		int x = abs(vexRT[Ch1]) < DEADZONE ? 0 : vexRT[Ch1];
+	motor[leftDrive]=leftPower;
+	motor[leftCenter]=leftPower;
 
-		motor[leftBack] = y + x;
-		motor[leftCenter] = y + x;
-		motor[leftFront] = y + x;
+	int rightPower = abs(vexRT[Ch3]) > DEADZONE ? vexRT[Ch2] : 0;
 
-		motor[rightBack] = y - x;
-		motor[rightCenter] = y - x;
-		motor[rightFront] = y - x;
-
-	}
-	else if(DriveMode == 0) //tank drive
-	{
-		int rightPower = abs(vexRT[Ch2]) < DEADZONE ? 0 : vexRT[Ch2];
-		int leftPower  = abs(vexRT[Ch3]) < DEADZONE ? 0 : vexRT[Ch3];
-
-		motor[leftBack] = leftPower;
-		motor[leftCenter] = leftPower;
-		motor[leftFront] = leftPower;
-
-		motor[rightBack] = rightPower;
-		motor[rightCenter] = rightPower;
-		motor[rightFront] = rightPower;
-	}
+	motor[rightDrive]=rightPower;
+	motor[rightCenter]=rightPower;
 }
 
-void ctrl_intake()
+void cntrl_intake1()
 {
-	int power_in = vexRT[Btn5U] ? 127 : vexRT[Btn5D] ? -127 : 0;
-
-	motor[intake] = power_in;
-
+	 motor[intake1stStage] = vexRT[Btn5U] ? 127 : vexRT[Btn5D] ? -127 : 0;
 }
 
-void ctrl_ramp()
+void cntrl_intake2()
 {
-	int power_in = vexRT[Btn7U] ? 127 : vexRT[Btn7D] ? -127 : 0;
+	 motor[intake2ndStage] = vexRT[Btn6U] ? 127 : vexRT[Btn6D] ? -127 : 0;
+}
 
-	motor[ramp] = power_in;
+void shooter()
+{
+	shootSpeed = vexRT[Btn8R] ? 100 : vexRT[Btn8D] ? 0 : shootSpeed;
+
+	motor[shooterTop] = shootSpeed;
+	motor[shooterMid] = shootSpeed;
+	motor[shooterBot] = shootSpeed;
 
 }

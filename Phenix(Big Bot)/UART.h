@@ -4,15 +4,12 @@
 //
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
 task UARTReceive();
 void Parse();
 int nRcvIndex = 0;
 int rcvChar;
 const int messageSize = 23;
-unsigned char rcvChars[messageSize]; // Keep buffer of last 23 characters received.
+char rcvChars[messageSize]; // Keep buffer of last 23 characters received.
 
 
 typedef struct {
@@ -90,9 +87,12 @@ void Parse()
 
 	  if(messageExists)
 	  {
-	  	char xValue[], yValue[];
+	  	char xValue[3];
+	  	char yValue[3];
 
 	  	bool xRegion, yRegion;
+	  	int indexX, indexY;
+
 	  	for(int i = messageStart; i < messageSize; i++)
 	  	{
 	  			if(rcvChars[i] == 0x5F && !xRegion)
@@ -107,11 +107,15 @@ void Parse()
 
 	  			if(yRegion)
 	  			{
-	  					yValue[0] = rcvChar[i];
+	  					char tempY = rcvChars[i];
+	  					yValue[indexY] = tempY;
+	  					indexY++;
 	  			}
 	  			else if(xRegion)
 	  			{
-	  					xValue[0] = rcvChar[i];
+	  					char tempX = rcvChars[i];
+	  					xValue[indexX] = tempX;
+	  					indexX++;
 	  			}
 
 	  	}
