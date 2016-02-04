@@ -74,7 +74,7 @@ void Parse()
 				messageStart = i;
 			}
 
-			if(rcvChars[i] == 0x5D && i > messageStart && i != -1)
+			if(rcvChars[i] == 0x5D && i > messageStart && messageStart != -1)
 			{
 				messageExists = true;
 		  }
@@ -83,7 +83,7 @@ void Parse()
 
 	  if(messageExists)
 	  {
-	  	char xValue[3], yValue[3];
+	  	string xValue[3], yValue[3];
 
 	  	bool xRegion, yRegion;
 	  	int xIndex, yIndex;

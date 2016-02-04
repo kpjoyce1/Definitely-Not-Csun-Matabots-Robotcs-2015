@@ -28,12 +28,13 @@
 
 // This is the main Pixy object
 Pixy pixy;
+int timer;
 
 uint16_t prevBlocks;
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(19200);
   pixy.init();
 }
 
@@ -42,7 +43,7 @@ void loop()
 {
   static int i = 0;
   uint16_t blocks;
-  bool  ballExists = true;
+  bool  ballExists = false;
 
   // grab blocks!
   blocks = pixy.getBlocks();
@@ -51,50 +52,63 @@ void loop()
 
   if (i % 2 == 0)
   {
+    timer += 10;
     if (blocks)
     {
 
       for (int j = 0; j < blocks; j++)
       {
 
-        if (pixy.blocks[j].width > 20 && pixy.blocks[j].height > 20)
+        if (pixy.blocks[j].width > 15 && pixy.blocks[j].height > 15)
         {
-
+          ballExists = true;
           unsigned char sig = pixy.blocks[j].signature == 1 ? 0x47 : 0x4F;
           String x = String(pixy.blocks[j].x);
           String y = String(pixy.blocks[j].y);
 
+
           Serial.write(0x5B);
+          delayMicroseconds(10);
           Serial.write(sig);
+          delayMicroseconds(10);
           Serial.write(0x5F);
+          delayMicroseconds(10);
           for (int i = 0; i < x.length(); i++)
           {
             Serial.write(x[i]);
+            delayMicroseconds(10);
           }
           Serial.write(0x5F);
           for (int i = 0; i < y.length(); i++)
           {
             Serial.write(y[i]);
+            delayMicroseconds(10);
           }
           Serial.write(0x5D);
 
-          Serial.println("");
         }
 
       }
     }
-    else if (i % 10000 == 0)
+    else if (timer > 100)
     {
-      Serial.write(0x5B);
-      Serial.write('N');
-      Serial.write(0x5F);
-      Serial.write(-1);
-      Serial.write(0x5F);
-      Serial.write(-1);
-      Serial.write(0x5F);
-      Serial.write(0x5D);
-      Serial.println("");
+      if (!pixy.getBlocks())
+      {
+        Serial.write(0x5B);
+        Serial.write('N');
+        Serial.write(0x5F);
+        Serial.write('-');
+        Serial.write('1');
+        Serial.write(0x5F);
+        Serial.write('-');
+        Serial.write('1');
+        Serial.write(0x5D);
+      }
+      timer = 0;
     }
   }
+
+
+  delay(40);
 }
 
