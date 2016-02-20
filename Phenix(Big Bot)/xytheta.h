@@ -95,8 +95,8 @@ task updatePosition()
 
     int distance = ticksToCm(getTicks());//Get distance
 
-		bigBot.currX +=  cosDegrees(bigBot.currTheta / 10) * distance;
-		bigBot.currY +=  sinDegrees(bigBot.currTheta / 10) * distance;
+		bigBot.currX +=  0.7*cosDegrees(bigBot.currTheta / 10) * distance;
+		bigBot.currY +=  0.7*sinDegrees(bigBot.currTheta / 10) * distance;
 
 		time1[T4] = 0;
     while(time1[T4] < 100){ bigBot.updated = false; } /*  Wait for 100 miliseconds to update */
@@ -135,25 +135,24 @@ float ticksToCm(int ticks)
 
 void setBallPositions()
 {
-	balls[3].x = 60.96 * 2;
-	balls[3].y = 60.96 * 2;
-	balls[3].visited = false;
-
 	balls[0].x = 60.96 * 4;
-	balls[0].y = 60.96 * 4;
+	balls[0].y = 60.96 * 4;//fudge
 	balls[0].visited = false;
+
+	balls[1].x = 60.96 * 5;
+	balls[1].y = 60.96 * 3;
+	balls[1].visited = false;
 
 	balls[2].x = 60.96 * 3;
 	balls[2].y = 60.96 * 1;
 	balls[2].visited = false;
 
-	balls[1].x = 60.96 * 4;
-	balls[1].y = 60.96 * 2;
-	balls[1].visited = false;
+	balls[3].x = 60.96 * 4;
+	balls[3].y = 60.96 * 2;
+	balls[3].visited = false;
 
-
-	balls[4].x = 60.96 * 5;
-	balls[4].y = 60.96 * 3;
+	balls[4].x = 60.96 * 2;
+	balls[4].y = 60.96 * 2;
 	balls[4].visited = false;
 
 }

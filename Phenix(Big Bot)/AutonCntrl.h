@@ -15,13 +15,16 @@ float angleCheck(float x, float y);
 void move(int rightPower, int leftPower, int time);
 void moveToLocation(float x, float y);
 void scanLocation(float x, float y);
-void set1stIntake(int power);
-void set2ndIntake(int power);
+void set1stIntake(int intakePower);
+void set2ndIntake(int intakePower);
+bool DQCheck();
+void intakeSequence();
 void lineFollow();
 
 #define centerOfCamera  150
 #define criticalDistance 130
-#define drivePower  40
+#define drivePower  50
+#define lightValue 2000
 //camera is x-y system where
 // x - left-> 0  right->480
 // y - far -> 0  close->200
@@ -30,13 +33,14 @@ void lineFollow();
 
 bool onLeft = false;
 int AquisitionAttempts = 0;
+int fudgeFactor = 1;
 
 
 task autonShooterControl()
 {
 	while(true)
 	{
-		flywheel.speedSet = bigBot.autonTargetSpeed;
+		flyWheel.speedSet = bigBot.autonTargetSpeed;
 		shooter_Control(&flyWheel);
 	}
 }
@@ -44,6 +48,10 @@ task autonShooterControl()
 void Cognition()
 {
 
+	if(DQCheck())
+	{
+		moveToLocation(3*60.96, 3*60.96);
+	}
 	switch(bigBot.state)
 	{
 			case Inspection :
@@ -61,71 +69,59 @@ void Cognition()
 			case Discharge :
 				DischargeState();
 				break;
-
 	}
 
 }
 
 void InspectionState()
 {
-	int numOfVisited = 0;
+
+	if(closestBall.sig != 'N' && Distance(balls[bigBot.currStack].x,balls[bigBot.currStack].y) < 60)
+	{
+		bigBot.state = Aquisition;
+	}
+	else
+	{
+
+	int numVisited = 0;
 	for(int i = 0; i < 5; i++)
 	{
 		if(!balls[i].visited)
 		{
 			bigBot.currStack = i;
-			scanLocation(balls[i].x, balls[i].y);
-			balls[i].visited = true;
+			moveToLocation(balls[i].x, balls[i].y);
+			if(Distance(balls[i].x, balls[i].y) < 30)
+			{
+				balls[i].visited = true;
+			}
+			if(closestBall.sig != 'N')
+			{
+				bigBot.state = Aquisition;
+			}
+			break;
 		}
 		else
 		{
-			numOfVisited++;
+			numVisited++;
 		}
 	}
-
-	if(numOfVisited == 5)
+	if(numVisited == 5)
 	{
-		scanLocation(60.96 * 3, 60.96 * 6);
+		scanLocation(60.96*3, 60.96*3);
+	}
 	}
 }
 
-void AquisitionState()
+void intakeSequence()
 {
-		AquisitionAttempts++;
-		if(closestBall.sig != 'N' && closestBall.updated || SensorValue[intakeSensor] < 53)
-		{
-			int difference = closestBall.x - centerOfCamera;
-			float gain = 0.3;
-			if(closestBall.x < 50)
-			{
-				difference = abs(difference * gain) > drivePower ? abs(difference) * gain : drivePower;
-				move(difference, gain*difference, 100);
-			}
-			else if(closestBall.x > 200)
-			{
-				difference = abs(difference * gain) > drivePower ? abs(difference) * gain : drivePower;
-				move(gain*difference, difference, 100);
-			}
-			if(closestBall.y > 190)
-			{
-				move(drivePower, drivePower, 100);
-				set1stIntake(-127);
-			}
-			else
-			{
-				move(drivePower, drivePower, 100);
-			}
-
-			if(SensorValue[intakeSensor] < 90)
-			{
 				set1stIntake(-127);
 				set2ndIntake(127);
-				move(-drivePower, -drivePower, 10);
-				while(SensorValue[intakeSensor] < 90) {}
-				set2ndIntake(0);
-				set1stIntake(0);
+				move(drivePower, drivePower, 0);
+
+				while(SensorValue[intakeSensor] < 100) {}
+				move(0,0, 300);
 				bigBot.ballCount++;
-				if(bigBot.ballCount == 2)
+				if(bigBot.ballCount >= 1)
 				{
 					bigBot.state = Position;
 				}
@@ -133,61 +129,138 @@ void AquisitionState()
 				{
 					bigBot.state = Inspection;
 				}
-				move(0, 0, 100);
-			}
+				set1stIntake(0);
+				set2ndIntake(0);
+				move(-drivePower, -drivePower, 100);
+}
+
+void AquisitionState()
+{
+		if(SensorValue[leftBumper] || SensorValue[rightBumper])
+		{
+			move(-100, -100, 500);
+			turn(bigBot.currTheta + 180);
 		}
 		else
 		{
-			if(closestBall.sig == 'N' && AquisitionAttempts >= 2)
+		if(closestBall.sig != 'N')
+		{
+			for(int i = 0; i < 500; i++)
 			{
-				set1stIntake(0);
-				set2ndIntake(0);
-			}
-		}
+				if(SensorValue[leftBumper] || SensorValue[rightBumper])
+				{
+					break;
+				}
+				targetBall.x = closestBall.x;
+				targetBall.y = closestBall.y;
+				set2ndIntake(127);
+				float gain = 0.2;
 
-		if(AquisitionAttempts > 200)
+					if(targetBall.x < 60)
+					{
+						move(drivePower, drivePower*gain, 200);
+					}
+					else if(targetBall.x > 200)
+					{
+						move(drivePower*gain, drivePower, 200);
+					}
+					else
+					{
+						move(drivePower, drivePower, 200);
+					}
+
+					if(SensorValue[intakeSensor] < 90)
+					{
+						intakeSequence();
+						break;
+					}
+					wait1Msec(25);
+				}
+		}
+		else if(SensorValue[intakeSensor] < 90)
+		{
+			intakeSequence();
+		}
+		else
 		{
 			bigBot.state = Inspection;
+		}
 		}
 }
 
 void PositionState()
 {
-	turn(angleCheck(60.96*5, 60.955*5));
 
-	while(!SensorValue[leftBumper] && !SensorValue[rightBumper])
+	turn(angleCheck(5*60.96, 5*60.96));
+	//fudgeFactor+=3;
+	move(drivePower, drivePower, 0);
+
+	while(!SensorValue[leftBumper] && !SensorValue[rightBumper]) {}
+
+	if(!SensorValue[leftBumper])
 	{
-		move(100, 100, 1);
+		while(!SensorValue[leftBumper])
+		{
+			move(0, 127, 1);
+		}
+	}
+	else if(!SensorValue[rightBumper])
+	{
+		while(!SensorValue[leftBumper])
+		{
+			move(127, 0, 1);
+		}
+	}
+	//bar sensor
+	// 77 - 124
+
+	if(SensorValue[barSensor] > 125)
+	{
+		move(-100, -100, 500);
+		move(50, 30, 40);
+		while(!SensorValue[leftBumper] && !SensorValue[rightBumper]) {}
+		move(0,0,0);
 	}
 
-	bigBot.autonTargetSpeed = 100;
+	else if(SensorValue[barSensor] < 77)
+	{
+	move(-100, -100, 500);
+	move(30, 50, 40);
+	while(!SensorValue[leftBumper] && !SensorValue[rightBumper]) {}
+	move(0,0,0);
+	}
+
+
+	bigBot.autonTargetSpeed = 120;
 	bigBot.state = Discharge;
+
 }
 
 void DischargeState()
 {
 	for(int i = 0; i < 4; i++)
 	{
-		wait1Msec(1000);
-		set2ndIntake(120);
-		wait1Msec(800);
-		set2ndIntake(0);
+		wait1Msec(1500);
+		set1stIntake(-127);
+		wait1Msec(500);
+		set1stIntake(0);
 	}
+
+	move(-drivePower, -drivePower, 1000);
+	bigBot.autonTargetSpeed = 0;
 	bigBot.ballCount = 0;
-	bigBot.currX = 60.96 * 5 - 40;
-	bigBot.currY = 60.96 * 5 - 40;
 
 	bigBot.state = Inspection;
 }
 
-void set1stIntake(int power)
+void set1stIntake(int intakePower)
 {
- 	motor[intake1stStage] = power;
+ 	motor[intake1stStage] = intakePower;
 }
 
-void set2ndIntake(int power)
+void set2ndIntake(int intakePower)
 {
- 	motor[intake2ndStage] = power;
+ 	motor[intake2ndStage] = intakePower;
 }
 
 void move(int rightPower, int leftPower, int time)
@@ -198,34 +271,13 @@ void move(int rightPower, int leftPower, int time)
 	motor[leftDrive] = leftPower;
 	motor[leftCenterDrive] = leftPower;
 
-	time1[T4] = 0;
-	while(time1[T4] < time){}
+	wait1Msec(time);
 
 }
 
-void PositioningState()
+bool DQCheck()
 {
-	if(bigBot.currX < bigBot.currY)
-	{
-		turn(3150);
-		onLeft = false;
-	}
-	else if(bigBot.currX > bigBot.currY)
-	{
-		turn(1350);
-		onLeft = true;
-	}
-
-	while(SensorValue[lineFollower] > 200)
-	{
-		move(40, 40, 1);
-	}
-	move(-40, -40, 100);
-	move(0,0, 20);
-	turn(450);
-	lineFollow();
-	move(0,0, 1);
-
+	return Distance(60.96*1,60.96*6) < 60.96*2.5
 }
 
 float angleCheck(float x, float y)
@@ -244,7 +296,7 @@ void scanLocation(float x, float y)
  float targetDistance = Distance(x,y);
  float currentDistance = 0;
 
- while(targetDistance - currentDistance > 100)
+ while(targetDistance - currentDistance > 40 && !DQCheck())
  {
   	int power = 50;
 
@@ -258,7 +310,6 @@ void scanLocation(float x, float y)
 		if(closestBall.sig != 'N')
 		{
 			bigBot.state = Aquisition;
-			AquisitionAttempts = 0;
 			move(0,0,0);
 			break;
 		}
@@ -282,9 +333,14 @@ void moveToLocation(float x, float y)
  float targetDistance = Distance(x,y);
  float currentDistance = 0;
 
- while(targetDistance - currentDistance > 40)
+ while(targetDistance - currentDistance > 100)
  {
-  	int power = 50;
+   	if(SensorValue[leftBumper] || SensorValue[rightBumper] || DQCheck())
+   	{
+   		move(-100, -100, 0);
+   		break;
+   	}
+  	int power = drivePower;
 
 		motor[rightDrive] = power;
 		motor[rightCenterDrive] = power;
@@ -367,13 +423,13 @@ void lineFollow()
 
 	 	while(!SensorValue[leftBumper] && !SensorValue[rightBumper])
 	 	{
-			if(SensorValue[lineFollower] > 800)
+			if(SensorValue[lineFollower] > lightValue)
 			{
-				move(60, 30, 10);
+				move(40, 10, 10);
 			}
 			else
 			{
-				move(30, 60, 10);
+				move(10, 40, 10);
 			}
 		}
 	}
@@ -381,13 +437,13 @@ void lineFollow()
 	{
 		while(!SensorValue[leftBumper] && !SensorValue[rightBumper])
 	 	{
-			if(SensorValue[lineFollower] > 800)
+			if(SensorValue[lineFollower] > lightValue)
 			{
-				move(30, 60, 10);
+				move(10, 40, 10);
 			}
 			else
 			{
-				move(60, 30, 10);
+				move(40, 10, 10);
 			}
 		}
 	}

@@ -1,5 +1,6 @@
 #pragma config(Sensor, in1,    gyro,           sensorGyro)
-#pragma config(Sensor, in2,    lineFollower,   sensorReflection)
+#pragma config(Sensor, in6,    lineFollower,   sensorLineFollower)
+#pragma config(Sensor, dgtl1,  barSensor,      sensorSONAR_cm)
 #pragma config(Sensor, dgtl3,  leftBumper,     sensorTouch)
 #pragma config(Sensor, dgtl4,  rightBumper,    sensorTouch)
 #pragma config(Sensor, dgtl5,  intakeSensor,   sensorSONAR_mm)
@@ -38,7 +39,6 @@ task autonomous()
 	//start x, y, theta system
 	startTask(updatePosition);
 
-
 	//PID autonomous beginning
 	shooter_MotorInit(&flyWheel, shooterTop, shooterMid, shooterBot, shooterEnc);
 	startTask(autonShooterControl);
@@ -53,7 +53,7 @@ task autonomous()
 	InitialPositioning();
 
 	//move to the center of the field
-  moveToLocation(3*60.96, 3*60.96);
+  moveToLocation(2*60.96-30, 3*60.96-30);
 
   //Bot is initially searching for balls
 	bigBot.state = Inspection;
@@ -62,7 +62,7 @@ task autonomous()
 	{
 		Cognition();
 	}
-	stopAllTasks();
+
 }
 
 /* User Control */
@@ -78,5 +78,4 @@ task usercontrol()
 		cntrl_intake2();
 		shooter(&flyWheel);
 	}
-	stopAllTasks();
 }
