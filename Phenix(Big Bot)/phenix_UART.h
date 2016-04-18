@@ -12,10 +12,10 @@ const int messageSize = 22;
 const int maxMessageLength = 11;
 char rcvChars[messageSize]; // Keep buffer of last 23 characters received.
 int messageStart = -1;
-char xValue[4];
-char yValue[4];
+char xValue[5];
+char yValue[5];
 
-
+bool NoBall = true;
 
 typedef struct {
 
@@ -27,7 +27,8 @@ typedef struct {
 } Ball;
 
 
-Ball closestBall, targetBall;
+Ball closestBall, temp;
+Ball Balls[10];
 
 // // Setup the UART ports
 // configureSerialPort(uartTwo, uartUserControl);
@@ -63,6 +64,28 @@ task UARTReceive()
 
 			Parse();
 		}
+
+		int closest = 0;
+		for(int i = 0; i < 10; i++)
+		{
+			if(Balls[closest].x > Balls[i].y && Balls[i].updated)
+			{
+				closest = i;
+			}
+		}
+
+		if(Balls[closest].updated && Balls[closest].sig != 'N')
+		{
+			closestBall.x = Balls[closest].x;
+			closestBall.y = Balls[closest].y;
+			closestBall.sig = Balls[closest].sig;
+			closestBall.updated = Balls[closest].updated;
+		}
+		else if(NoBall)
+		{
+			closestBall.sig = 'N';
+		}
+
 	}
 }
 
@@ -136,21 +159,46 @@ void Parse()
 			}
 
 		}
+		temp.sig = rcvChars[messageStart+1];
+		temp.x = atoi(xValue);
+		temp.y = atoi(yValue);
+		int untranslatedX = bigBot.X + cosDegrees(bigBot.Theta)*temp.y + cosDegrees(90 - bigBot.Theta)*temp.x;
+		int untranslatedY = bigBot.Y + -(sinDegrees(bigBot.Theta)*temp.y + sinDegrees(90 - bigBot.Theta)*temp.x);
+		temp.x = untranslatedX;
+		temp.y = untranslatedY;
+		temp.updated = true;
 
-		closestBall.sig = rcvChars[messageStart+1];
-		//if(xValue[2] == '\0')
-		//{
-			closestBall.x = atoi(xValue);
-		//}
-		//else
-		//{
-		//	closestBall.x = atoi(xValue);
-		//	closestBall.x /= 1000;
-		//}
-		closestBall.y = atoi(yValue);
-		closestBall.updated = true;
+
+		for(int i = 0; i < 10; i++)
+		{
+			if(temp.sig == 'N')
+			{
+				Balls[i].x = 0;
+				Balls[i].y = 0;
+				Balls[i].sig = 'N';
+				Balls[i].updated = false;
+				NoBall = true;
+			}
+			else if(abs(temp.x - Balls[i].x) < 20 && abs(temp.y - Balls[i].y) < 20 && temp.sig == Balls[i].sig) //Same ball
+			{
+				Balls[i].x = temp.x;
+				Balls[i].y = temp.y;
+				Balls[i].sig = temp.sig;
+				Balls[i].updated = true;
+				NoBall = false;
+				break;
+			}
+			else if(!Balls[i].updated)//Existing ball Check
+			{
+				Balls[i].x = temp.x;
+				Balls[i].y = temp.y;
+				Balls[i].sig = temp.sig;
+				Balls[i].updated = true;
+				NoBall = false;
+				break;
+			}
+		}
 	}
-
 }
 
 void configureSerial()

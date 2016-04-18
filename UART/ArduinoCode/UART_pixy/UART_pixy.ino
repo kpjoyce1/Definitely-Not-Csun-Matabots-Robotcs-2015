@@ -28,15 +28,17 @@
 
 // This is the main Pixy object
 Pixy pixy;
-int timer;
-
 uint16_t prevBlocks;
-
+int state = 0;
+// 0 - search for ball
+// 1 - search for goal
 void setup()
 {
   Serial.begin(19200);
   pixy.init();
 }
+
+
 
 
 void loop()
@@ -52,63 +54,122 @@ void loop()
 
   if (i % 2 == 0)
   {
-    timer += 10;
     if (blocks)
     {
 
       for (int j = 0; j < blocks; j++)
       {
-
-        if (pixy.blocks[j].width > 15 && pixy.blocks[j].height > 15)
+        if (state == 0)
         {
-          ballExists = true;
-          unsigned char sig = pixy.blocks[j].signature == 1 ? 0x47 : 0x4F;
-          String x = String(pixy.blocks[j].x);
-          String y = String(pixy.blocks[j].y);
-
-
-          Serial.write(0x5B);
-          delayMicroseconds(10);
-          Serial.write(sig);
-          delayMicroseconds(10);
-          Serial.write(0x5F);
-          delayMicroseconds(10);
-          for (int i = 0; i < x.length(); i++)
+          if (pixy.blocks[j].width > 15 && pixy.blocks[j].height > 15)
           {
-            Serial.write(x[i]);
-            delayMicroseconds(10);
-          }
-          Serial.write(0x5F);
-          for (int i = 0; i < y.length(); i++)
-          {
-            Serial.write(y[i]);
-            delayMicroseconds(10);
-          }
-          Serial.write(0x5D);
+            unsigned char sig = pixy.blocks[j].signature == 1 ? 'G' : 'O';
+            if (sig == 'O' || sig == 'G')
+            {
+              float tempx = (pixy.blocks[j].x + pixy.blocks[j].width / 2);
+              float tempy = (pixy.blocks[j].y + pixy.blocks[j].height / 2);
 
+              tempy = (0.0022581)*tempy*tempy + (-0.96265)*tempy + 121.98;
+              float a,b;
+              if(tempy > 53)
+              {
+                a = 0.18346;
+                b = -32.483;
+              }
+              else if(tempy > 49)
+              {
+                a = 0.16966;
+                b = -30.391;  
+              }
+              else if(tempy > 45)
+              {
+                a = 0.15061;
+                b = -27.241;  
+              }
+              else if(tempy > 41)
+              {
+                a = 0.14038;
+                b = -25.162;  
+              }
+              else if(tempy > 37)
+              {
+                a = 0.12643;
+                b = -22.836;  
+              }
+              else if(tempy > 33)
+              {
+                a = 0.1074;
+                b = -19.439;  
+              }
+              else if(tempy > 29)
+              {
+                a = 0.090698;
+                b = -16.874;  
+              }
+              else if(tempy > 25)
+              {
+                a = 0.077751;
+                b = -14.729;  
+              }
+              else if(tempy > 21)
+              {
+                a = 0.058115;
+                b = -11.484;  
+              }
+              else //if(tempy > 17)
+              {
+                a = 0.043843;
+                b = -8.4397;  
+              }
+              tempx = tempx * a + b;
+              String x = String(int(round(tempx)));
+              String y = String(int(round(tempy)));
+
+              Serial.write(0x5B);
+              delayMicroseconds(10);
+              Serial.write(sig);
+              delayMicroseconds(10);
+              Serial.write(0x5F);
+              delayMicroseconds(10);
+              for (int i = 0; i < x.length(); i++)
+              {
+                Serial.write(x[i]);
+                delayMicroseconds(10);
+              }
+              Serial.write(0x5F);
+              for (int i = 0; i < y.length(); i++)
+              {
+                Serial.write(y[i]);
+                delayMicroseconds(10);
+              }
+              Serial.write(0x5D);
+              Serial.println();
+            }
+          }
         }
-
       }
+
     }
-    else if (timer > 100)
+    else
     {
+      delay(20);
       if (!pixy.getBlocks())
       {
         Serial.write(0x5B);
         Serial.write('N');
         Serial.write(0x5F);
+        Serial.write(' - ');
         Serial.write('-');
         Serial.write('1');
         Serial.write(0x5F);
+        Serial.write(' - ');
         Serial.write('-');
         Serial.write('1');
         Serial.write(0x5D);
       }
-      timer = 0;
     }
   }
 
-
-  delay(40);
+  delay(20);
 }
 

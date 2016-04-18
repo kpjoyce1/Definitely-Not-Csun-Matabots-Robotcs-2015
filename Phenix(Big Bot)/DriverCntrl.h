@@ -38,7 +38,23 @@ void cntrl_intake1()
 
 void cntrl_intake2()
 {
-	 motor[intake2ndStage] = vexRT[Btn6U] ? 127 : vexRT[Btn6D] ? -127 : 0;
+	 motor[intake2ndStage] = vexRT[Btn6U] ? -127 : vexRT[Btn6D] ? 127 : 0;
+}
+
+void lock_move()
+{
+	if(vexRT[Btn7U])
+	{
+		motor[liftRelease] = 127;
+	}
+	else if(vexRT[Btn7D])
+	{
+		motor[liftRelease] = -127;
+	}
+	else
+	{
+		motor[liftRelease] = 0;
+	}
 }
 
 void shooter(MOTOR_PI* motorA)
@@ -47,7 +63,7 @@ void shooter(MOTOR_PI* motorA)
 ///////////////////
 	if(vexRT[Btn8R])
 	{
-		wheelSpeed = 95;
+		wheelSpeed = 75;
 	}
 
 	if(vexRT[Btn8L])

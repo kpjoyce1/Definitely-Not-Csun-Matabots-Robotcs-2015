@@ -1,7 +1,10 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // X, Y, Theta System File
-//
+// Degrees normalized to 0 - 360
+// Publishes
+// -Robot Orientation in 2-D (x, y, theta)
+// -Has function to get reference angle
 // -Uses timer T4
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -12,8 +15,8 @@ const int  TurnLeft = 9;
 const int  TurnRight = -9;
 //const int Idle = 0;
 
-task updatePosition();
-int average(float value1, float value2);
+task UpdatePosition();
+int Average(float value1, float value2);
 int getTicks();
 float ticksToCm(int ticks);
 void InitialPositioning();
@@ -27,135 +30,107 @@ typedef enum{
 
 typedef struct
 {
-		int x;
-		int y;
-		bool visited;
+	int x;
+	int y;
+	bool visited;
 }ballPosition;
 
 typedef struct
 {
-  /* Struct to hold robots x, y, and theta relative to a starting position */
-  float currX, currY;
-  float prevX, prevY;  /* Keep prev data for PID purposes although not used yet */
-  float currTheta, prevTheta;
-  float turretAngle;
-  AutonState state;
-  int ballCount;
-  int currStack;
-  int autonTargetSpeed;
-  bool updated;
-}robot;
+	/* Struct to hold robots x, y, and theta relative to a starting position */
+	float X, Y;
+	float prevX, prevY;  /* Keep prev data for PID purposes although not used yet */
+	float XSpeed, YSpeed;
+	float Theta;
+	AutonState state;
+	int ballCount;
+	int autonTargetSpeed;
+	bool updated;
+}Robot;
 //int autonTargetSpeed; //global targetSpeed set in autonous
 
 typedef struct
 {
-  /* Struct to hold encoder information and address */
-  int currTick;
-  int prevTick;
-  float gearRatio;
-}encoder;
+	/* Struct to hold encoder information and address */
+	int currTick;
+	int prevTick;
+	float gearRatio;
+}Encoder;
 
 /*  Ball Positions             */
-ballPosition balls[5];
+//ballPosition balls[10];
 
 /*  Initialize robot position  */
-robot bigBot;
+Robot bigBot;
 
 /*  Initialize encoders  */
-encoder leftEnc, rightEnc;
+Encoder leftEnc, rightEnc;
 
-float referenceAngle(float degrees)
+task UpdatePosition()
 {
+	/*
+	Use movement type to define how to get distance
+	Use gyro to define the angle
+	Create vector and add to original values
+	*/
 
-	while(degrees > 3600)
-	{
-		degrees -= 3600;
+	while(true){
+
+		leftEnc.prevTick = leftEnc.currTick;
+		rightEnc.prevTick = rightEnc.currTick;
+
+		leftEnc.currTick = SensorValue[leftDriveEnc];
+		rightEnc.currTick = SensorValue[rightDriveEnc];
+		bigBot.Theta = (SensorValue[gyro]/10) % 360;//Get angle;
+
+		float distance = ticksToCm(getTicks());//Get distance
+		bigBot.XSpeed = cosDegrees(bigBot.Theta) * distance;
+		bigBot.YSpeed = sinDegrees(bigBot.Theta) * distance;
+		bigBot.X +=  bigBot.XSpeed;
+		bigBot.Y +=  bigBot.YSpeed;
+
+		wait1Msec(5);
 	}
-
-	while(degrees < 0)
-	{
-		degrees += 3600;
-	}
-
-	return degrees;
 }
-
-task updatePosition()
-{
-  /*
-    Use movement type to define how to get distance
-    Use gyro to define the angle
-    Create vector and add to original values
-   */
-
-  while(true){
-    leftEnc.currTick = SensorValue[leftDriveEnc];
-    rightEnc.currTick = SensorValue[rightDriveEnc];
-		bigBot.currTheta = referenceAngle(SensorValue[gyro]);//Get angle;
-
-    int distance = ticksToCm(getTicks());//Get distance
-
-		bigBot.currX +=  0.7*cosDegrees(bigBot.currTheta / 10) * distance;
-		bigBot.currY +=  0.7*sinDegrees(bigBot.currTheta / 10) * distance;
-
-		time1[T4] = 0;
-    while(time1[T4] < 100){ bigBot.updated = false; } /*  Wait for 100 miliseconds to update */
-		bigBot.updated = true;
-    bigBot.prevTheta = bigBot.currTheta;
-    leftEnc.prevTick = leftEnc.currTick;
-    rightEnc.prevTick = rightEnc.currTick;
-  }
-}
-
 
 int getTicks()
 {
-
-  int driveConfig  = (sgn(motor[leftDrive]) * 10 + sgn(motor[rightDrive]));
-
-	if(driveConfig != TurnLeft && driveConfig != TurnRight){
-    return average((leftEnc.currTick - leftEnc.prevTick), (rightEnc.currTick - rightEnc.prevTick));
-  }
-  else //if(driveConfig == TurnLeft || driveConfig == TurnRight || driveConfig == Stop)
-  {
-    return 0; /* Only angle should change unless stopped */
-  }
-
+	return Average((leftEnc.currTick - leftEnc.prevTick), (rightEnc.currTick - rightEnc.prevTick));
 }
 
-int average(float value1, float value2)
+int Average(float value1, float value2)
 {
-  return (value1 + value2) / 2.;
+	return (value1 + value2) / 2.;
 }
 
 float ticksToCm(int ticks)
 {
-		return 2. * PI * (5.08) * (float)(ticks) / 360.; //2 * pi * r * ratio of angle ticks : 360
+	return 2. * PI * (2.0) * 2.65625 * (float)(ticks) / 360.; //2 * pi * r * ratio of angle ticks : 360
 }
 
-void setBallPositions()
-{
-	balls[0].x = 60.96 * 4;
-	balls[0].y = 60.96 * 4;//fudge
-	balls[0].visited = false;
+//void setBallPositions()
+//{
+//	balls[0].x = 60.96 * 4;
+//	balls[0].y = 60.96 * 4;//fudge
+//	balls[0].visited = false;
 
-	balls[1].x = 60.96 * 5;
-	balls[1].y = 60.96 * 3;
-	balls[1].visited = false;
+//	balls[1].x = 60.96 * 5;
+//	balls[1].y = 60.96 * 3;
+//	balls[1].visited = false;
 
-	balls[2].x = 60.96 * 3;
-	balls[2].y = 60.96 * 1;
-	balls[2].visited = false;
+//	balls[2].x = 60.96 * 3;
+//	balls[2].y = 60.96 * 1;
+//	balls[2].visited = false;
 
-	balls[3].x = 60.96 * 4;
-	balls[3].y = 60.96 * 2;
-	balls[3].visited = false;
+//	balls[3].x = 60.96 * 4;
+//	balls[3].y = 60.96 * 2;
+//	balls[3].visited = false;
 
-	balls[4].x = 60.96 * 2;
-	balls[4].y = 60.96 * 2;
-	balls[4].visited = false;
+//	balls[4].x = 60.96 * 2;
+//	balls[4].y = 60.96 * 2;
+//	balls[4].visited = false;
 
-}
+//}
 
 void InitialPositioning()
 {
@@ -163,9 +138,9 @@ void InitialPositioning()
 	SensorValue[rightDriveEnc] = 0;
 	SensorValue[leftDriveEnc] = 0;
 
-	bigBot.currX =  35.56;
-	bigBot.currY =  96.52;
-	bigBot.currTheta = 0;
+	bigBot.X =  0;//35.56;
+	bigBot.Y =  0;//96.52;
+	bigBot.Theta = 0;
 	bigBot.state = Inspection;
 	bigBot.ballCount = 0;
 }
