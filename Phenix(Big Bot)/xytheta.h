@@ -41,7 +41,7 @@ typedef struct
 	float X, Y;
 	float prevX, prevY;  /* Keep prev data for PID purposes although not used yet */
 	float XSpeed, YSpeed;
-	float Theta;
+	float Theta, Drift;
 	AutonState state;
 	int ballCount;
 	int autonTargetSpeed;
@@ -81,7 +81,8 @@ task UpdatePosition()
 
 		leftEnc.currTick = SensorValue[leftDriveEnc];
 		rightEnc.currTick = SensorValue[rightDriveEnc];
-		bigBot.Theta = (SensorValue[gyro]/10) % 360;//Get angle;
+
+		bigBot.Theta = (SensorValue[gyro] / 10) % 360;
 
 		float distance = ticksToCm(getTicks());//Get distance
 		bigBot.XSpeed = cosDegrees(bigBot.Theta) * distance;
@@ -89,7 +90,10 @@ task UpdatePosition()
 		bigBot.X +=  bigBot.XSpeed;
 		bigBot.Y +=  bigBot.YSpeed;
 
-		wait1Msec(5);
+		while(time1[T4] < 10) {
+			bigBot.Theta = (SensorValue[gyro] / 10) % 360 + bigBot.Drift;
+		}
+		time1[T4] = 0;
 	}
 }
 
@@ -105,7 +109,7 @@ int Average(float value1, float value2)
 
 float ticksToCm(int ticks)
 {
-	return 2. * PI * (2.0) * 2.65625 * (float)(ticks) / 360.; //2 * pi * r * ratio of angle ticks : 360
+	return 2. * PI * (2.0) * 1.1 * (float)(ticks) / 360.; //2 * pi * r * ratio of angle ticks : 360
 }
 
 //void setBallPositions()
@@ -141,6 +145,7 @@ void InitialPositioning()
 	bigBot.X =  0;//35.56;
 	bigBot.Y =  0;//96.52;
 	bigBot.Theta = 0;
+	bigBot.Drift = 0;
 	bigBot.state = Inspection;
 	bigBot.ballCount = 0;
 }

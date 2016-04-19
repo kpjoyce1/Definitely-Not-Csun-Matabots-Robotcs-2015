@@ -14,7 +14,7 @@
 										//and set the power value on here once it stabilize. Do you wanna do the hard way? well, probably you would have to run an
 										//imaginary PI controller, with integral wind-up. And get the value in it.
 
-#define SATURATION_UP 127 //motor up saturation
+#define SATURATION_UP 100 //motor up saturation
 #define SATURATION_DOWN 0 //motor down saturation, we dont want the motor to fight against movement
 #define MOTOR_DEADZONE 20 //all motors have a region where it does not responde to PWM. So, you cannot apply pwm in this regions, unless you want to burn stuff
 

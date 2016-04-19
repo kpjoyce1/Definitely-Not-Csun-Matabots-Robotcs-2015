@@ -27,8 +27,8 @@ void intakeSequence();
 #define lightValue 2000
 
 #define Saturation_Up  100
-#define Saturation_Down  42
-//camera is x-y system where
+#define Saturation_Down  50
+//camera is x-y system where  sat_down was 42
 // x - left-> 0  right->480
 // y - far -> 0  close->200
 
@@ -78,10 +78,13 @@ void Cognition()
 
 void TrackBall()
 {
-	if(closestBall.sig == 'G' || closestBall.sig == 'O')
+	if(closestBall.sig == 'G' || closestBall.sig == 'O' && closestBall.x != 0)
 	{
 		set1stIntake(-127);
 		ApproachBall(closestBall.x, closestBall.y);
+		//float targetAngle = angleCheck(closestBall.x,  closestBall.y);
+		//Turn(targetAngle);
+
 	}
 
 }
@@ -91,9 +94,10 @@ void intakeSequence()
 	BallLock = false;
 	set1stIntake(-127);
 	set2ndIntake(-127);
-	//Move(drivePower, drivePower, 0);
-
+	Move(-drivePower, -drivePower, 150);
+	Stop();
 	while(SensorValue[intakeSensor] < 150) {}
+	wait1Msec(500);
 	Stop();
 	bigBot.ballCount++;
 	if(bigBot.ballCount >= 1)
@@ -185,13 +189,13 @@ void moveToLocation(float x, float y)
 	Turn(targetAngle);
 	float targetDistance = Distance(x, y, bigBot.X, bigBot.Y);
 	float Error = targetDistance;
-	float Kpd = 0.5;
+	float Kpd = 0.3;
 	float prevX, prevY;
 
 	prevX = bigBot.X;
 	prevY = bigBot.Y;
 
-	while(Error > 2)
+	while(Error > 5)
 	{
 		int power = Error * Kpd;
 
@@ -227,14 +231,15 @@ void ApproachBall(float x, float y)
 	Turn(targetAngle);
 	float targetDistance = Distance(x, y, bigBot.X, bigBot.Y);
 	float Error = targetDistance;
-	float Kpd = 0.5;
+	float Kpd = 0.4;
 	float prevX, prevY;
 
 	prevX = bigBot.X;
 	prevY = bigBot.Y;
 
-	while(Error > 2)// && SensorValue[intakeSensor] > 120)
+	while(Error > 0 )//&& SensorValue[intakeSensor] > 100)
 	{
+
 		int power = Error * Kpd;
 
 		if((power) < Saturation_Down)
@@ -270,17 +275,10 @@ float Distance(float x, float y, float x1, float y1)
 void Turn(float targetDegrees)
 {
 	float Error = targetDegrees - bigBot.Theta;
-	while(Error < -180)
-	{
-		Error += 360;
-	}
-	while(Error > 180)
-	{
-		Error -= 360;
-	}
-	float pGain = 0.5;
-	float samplePeriod = 75;
-	float acceptableError = 1;
+
+	float pGain = 0.6;
+	float samplePeriod = 5;
+	float acceptableError = 0.00;
 	float power;
 	float previousError = 0;
 
@@ -297,7 +295,7 @@ void Turn(float targetDegrees)
 		}
 
 		power = pGain * Error;
-		power = abs(power) < 50 ? sgn(power) * 50 : power;
+		power = abs(power) < 45 ? sgn(power) * 45 : power;
 
 		motor[rightDrive] = power;
 		motor[rightCenterDrive] = power;
@@ -323,7 +321,8 @@ void Stop()
 
 void Unload()
 {
-	wait1Msec(1000);
+	set2ndIntake(127)
+	wait1Msec(500);
 	set1stIntake(-127);
   set2ndIntake(-127);
 	wait1Msec(3000);

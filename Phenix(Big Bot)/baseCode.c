@@ -33,6 +33,7 @@ void pre_auton()
 
 task autonomous()
 {
+
 	//clear sensors
 	clearAll(actOnSensors);
 	SensorType[gyro] = sensorNone;
@@ -40,33 +41,29 @@ task autonomous()
 	SensorType[gyro] = sensorGyro;
 	wait1Msec(2000);
 
+	//start pixy communication
+	configureSerial();
+	startTask(UARTReceive);
 
 	//start x, y, theta system
 	startTask(UpdatePosition);
 
+	InitialPositioning();
 	//PID autonomous beginning
 	shooter_MotorInit(&flyWheel, shooterTop, shooterMid, shooterBot, shooterEnc);
 	startTask(autonShooterControl);
 	bigBot.autonTargetSpeed = 0;
 
-	//start pixy communication
-	configureSerial();
-	startTask(UARTReceive);
-
 	//Initial positioning
 	//setBallPositions();
-	InitialPositioning();
+	//while(true){} //93 60
+	moveToLocation(17, 6);
 	while(true)
 	{
-		Turn(90);
-		Turn(180);
-		Turn(270);
-		Turn(0);
-	}
-	while(true)
-	{
-		wait1Msec(100);
+		Stop();
+		wait1Msec(500);
 		while(closestBall.sig == 'N'){}
+
 		while(bigBot.ballCount < 1)
 		{
 			TrackBall();
@@ -74,12 +71,16 @@ task autonomous()
 			intakeSequence();
 		}
 		set1stIntake(-127);
-		moveToLocation(24 * 2, 24 * 2);
-		moveToLocation(24 * 3, 24 * 3);// first is 84 91 drift is fairly prevelant, will account for
+		moveToLocation(93, 63);
 		bigBot.autonTargetSpeed = 85; //check for gyro drift before running auton
-		Turn(45);
+		//moveToLocation(24 * 3.5, 24 * 3.0);// first is 84 91 drift is fairly prevelant, will account for
+		float targetAngle = angleCheck(93 + 12, 63 + 24);// 4.6 4.2
+		Turn(targetAngle);
 		Unload();
-		moveToLocation(20, 20);
+		moveToLocation(24 * 3, 24* 2);
+		Turn(90);
+		ClearBalls();
+		wait1Msec(500);
 	}
 	//	moveToLocation(rand() % 80 + 20, rand() % 80 + 20);
 	//	Stop();
